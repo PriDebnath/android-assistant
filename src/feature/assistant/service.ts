@@ -4,21 +4,30 @@ import * as WebBrowser from "expo-web-browser";
 import { parseIntentWithAI } from "./ai/service/ai-intent.service";
 
 export const appAliases: Record<string, SupportedApp> = {
+  // YouTube
   youtube: "youtube",
   "you tube": "youtube",
 
+  // Chrome
   chrome: "chrome",
   browser: "chrome",
   google: "chrome",
 
+  // WhatsApp
   whatsapp: "whatsapp",
   "what's app": "whatsapp",
+  "whats app": "whatsapp",
 
+  // Spotify
+  spotify: "spotify",
+  "spotify music": "spotify",
+
+  // Maps
   maps: "maps",
   "google maps": "maps",
 
+  // Settings
   settings: "settings",
-
 };
 
 
@@ -26,6 +35,7 @@ const appUrls: Record<SupportedApp, string> = {
   youtube: "youtube://",
   chrome: "googlechrome://",
   whatsapp: "whatsapp://",
+  spotify: "spotify://",
   maps: "geo:0,0?q=",
   settings: "app-settings:",
 };
@@ -34,42 +44,38 @@ const webFallbacks: Partial<Record<SupportedApp, string>> = {
   youtube: "https://www.youtube.com",
   chrome: "https://www.google.com",
   whatsapp: "https://www.whatsapp.com",
+  spotify: "https://open.spotify.com",
   maps: "https://maps.google.com",
 };
+
+
 
 export async function openApp(app: SupportedApp) {
   const url = appUrls[app];
 
   try {
-    const supported = await Linking.canOpenURL(url);
+    await Linking.openURL(url);
 
-    if (supported) {
-      await Linking.openURL(url);
-
-      return {
-        success: true,
-        message: `Opening ${getAppName(app)}.`,
-      };
-    }
-
+    return {
+      success: true,
+      message: `Opening ${getAppName(app)}.`,
+    };
+  } catch {
     const fallback = webFallbacks[app];
 
     if (fallback) {
-      await Linking.openURL(fallback);
+      try {
+        await Linking.openURL(fallback);
 
-      return {
-        success: true,
-        message: `I couldn't open the app, so I opened ${getAppName(
-          app,
-        )} in the browser.`,
-      };
+        return {
+          success: true,
+          message: `I couldn't open the app, so I opened ${getAppName(app)} in the browser.`,
+        };
+      } catch {
+        // Browser fallback also failed.
+      }
     }
 
-    return {
-      success: false,
-      message: `I couldn't open ${getAppName(app)}.`,
-    };
-  } catch {
     return {
       success: false,
       message: `I couldn't open ${getAppName(app)}.`,
@@ -88,6 +94,9 @@ function getAppName(app: SupportedApp) {
     case "whatsapp":
       return "WhatsApp";
 
+    case "spotify":
+      return "Spotify";
+
     case "maps":
       return "Maps";
 
@@ -98,7 +107,6 @@ function getAppName(app: SupportedApp) {
       return app;
   }
 }
-
 
 
 export async function searchWeb(query: string) {
@@ -241,11 +249,11 @@ export async function handleAssistantMessage(
   text: string,
 ): Promise<string> {
   let intent = parseIntent(text);
-  console.log('🤖 Using AI');
   let UNKNOWN_INTENT: string = DEAFAULT_UNKNOWN;
 
   // Use Qwen3 only when the rule-based parser cannot understand.
   if (intent.type === "unknown") {
+      console.log('🤖 Using AI');
     try {
       console.log("[Assistant] Trying AI intent recognition...");
       intent = await parseIntentWithAI(text);

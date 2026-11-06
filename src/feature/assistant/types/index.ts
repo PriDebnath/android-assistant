@@ -38,5 +38,6 @@ export type SupportedApp =
   | "youtube"
   | "chrome"
   | "whatsapp"
+  | "spotify"
   | "maps"
   | "settings";
