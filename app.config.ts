@@ -1,7 +1,7 @@
 const isWindows = process.platform === 'win32';
 
 
-export default ({  }) => ({
+export default ({ }) => ({
   "expo": {
     "name": "my-mobile-app",
     "slug": "my-mobile-app",
@@ -22,7 +22,10 @@ export default ({  }) => ({
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.pri.assistant"
+      "package": "com.pri.assistant",
+      "permissions": [
+        "CALL_PHONE"
+      ]
     },
     "web": {
       "output": "static",

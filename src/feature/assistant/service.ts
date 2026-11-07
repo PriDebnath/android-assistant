@@ -158,20 +158,21 @@ export function calculate(expression: string) {
 }
 
 export async function callNumber(phoneNumber: string) {
-  const url = `tel:${phoneNumber}`;
+  const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
+console.log('calling');
 
-  const supported = await Linking.canOpenURL(url);
-
-  if (!supported) {
-    return {
-      success: false,
-      message: "Calling isn't available on this device.",
-    };
+  if (Platform.OS === "android") {
+    await IntentLauncher.startActivityAsync(
+      // IntentLauncher.ActivityAction.c,
+      "android.intent.action.CALL",
+      {
+        data: `tel:${cleanedNumber}`,
+      },
+    );
+  } else {
+    await Linking.openURL(`tel:${cleanedNumber}`);
   }
-
-  await Linking.openURL(url);
-
-  return {
+    return {
     success: true,
     message: `Calling ${phoneNumber}.`,
   };
