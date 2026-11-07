@@ -70,7 +70,31 @@ export default ({  }) => ({
       "expo-font",
       "expo-image",
       "expo-status-bar",
-          ['expo-build-properties', { android: isWindows ? { cmakeVersion: '3.31.6' } : {} }]
+      ['expo-build-properties', { android: isWindows ? { cmakeVersion: '3.31.6' } : {} }],
+      [
+        "expo-widgets",
+        {
+          "enableAndroid": true,
+          "widgets": [
+            {
+              "name": "MyWidget",
+              "displayName": "My Widget",
+              "description": "A sample home screen widget",
+              "android": {
+                "targetCellWidth": 2,
+                "targetCellHeight": 2,
+                "initialLayout": "./src/widgets/my-widgets.tsx"
+              }
+            }
+          ]
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow $(PRODUCT_NAME) to access your contacts."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
