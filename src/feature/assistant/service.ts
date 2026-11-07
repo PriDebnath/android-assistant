@@ -1,7 +1,9 @@
-import { AssistantIntent, SupportedApp } from "@/feature/assistant/types";
-import * as Linking from "expo-linking";
+import * as Contacts from "expo-contacts";
 import * as WebBrowser from "expo-web-browser";
+import { Platform, Linking } from "react-native";
+import * as IntentLauncher from "expo-intent-launcher";
 import { parseIntentWithAI } from "./ai/service/ai-intent.service";
+import { AssistantIntent, SupportedApp } from "@/feature/assistant/types";
 
 export const appAliases: Record<string, SupportedApp> = {
   // YouTube
@@ -155,6 +157,49 @@ export function calculate(expression: string) {
       message: "I couldn't calculate that.",
     };
   }
+}
+
+// export async function callNumber(phoneNumber: string) {
+//   const url = `tel:${phoneNumber}`;
+
+//   const supported = await Linking.canOpenURL(url);
+
+//   if (!supported) {
+//     return {
+//       success: false,
+//       message: "Calling isn't available on this device.",
+//     };
+//   }
+
+//   await Linking.openURL(url);
+
+//   return {
+//     success: true,
+//     message: `Calling ${phoneNumber}.`,
+//   };
+// }
+
+
+export async function findContact(name: string) {
+  const { status } = await Contacts.requestPermissionsAsync();
+
+  if (status !== "granted") {
+    throw new Error("Contacts permission denied");
+  }
+
+  const { data } = await Contacts.getContactsAsync({
+    fields: [Contacts.Fields.PhoneNumbers],
+  });
+
+  const contact = data.find((item) =>
+    item.name?.toLowerCase().includes(name.toLowerCase())
+  );
+
+  if (!contact?.phoneNumbers?.length) {
+    return null;
+  }
+
+  return contact.phoneNumbers[0].number;
 }
 
 export async function callNumber(phoneNumber: string) {
