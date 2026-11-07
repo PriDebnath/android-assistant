@@ -7,7 +7,7 @@ export default ({ }) => ({
     "slug": "my-mobile-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/pri.png",
     "scheme": "mymobileapp",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -16,9 +16,9 @@ export default ({ }) => ({
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/pri.png",
+        // "backgroundImage": "./assets/images/android-icon-background.png",
+        // "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
@@ -29,7 +29,7 @@ export default ({ }) => ({
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/pri.png"
     },
     "plugins": [
       "expo-router",
@@ -96,6 +96,18 @@ export default ({ }) => ({
         "expo-contacts",
         {
           "contactsPermission": "Allow $(PRODUCT_NAME) to access your contacts."
+        }
+      ],
+            [
+        "expo-splash-screen",
+        {
+          // "backgroundColor": "#232323",
+          "image": "./assets/images/pri.png",
+          "dark": {
+            "image": "./assets/images/pri.png"
+            // "backgroundColor": "#000000"
+          },
+          "imageWidth": 200
         }
       ]
     ],
