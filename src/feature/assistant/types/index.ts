@@ -1,4 +1,4 @@
- 
+
 export type ChatRole = "user" | "assistant";
 
 export type ChatMessage = {
@@ -10,29 +10,37 @@ export type ChatMessage = {
 
 export type AssistantIntent =
   | {
-      type: "open_app";
-      app: SupportedApp;
-    }
+    type: "open_app";
+    app: SupportedApp;
+  }
   | {
-      type: "web_search";
-      query: string;
-    }
+    type: "web_search";
+    query: string;
+  }
   | {
-      type: "calculate";
-      expression: string;
-    }
+    type: "calculate";
+    expression: string;
+  }
   | {
-      type: "call";
-      phoneNumber: string;
-    }
+    type: "call";
+    phoneNumber: string;
+  }
   | {
-      type: "whatsapp";
-      phoneNumber?: string;
-      message?: string;
-    }
+    type: 'confirm_call'
+    phoneNumber: string;
+  }
   | {
-      type: "unknown";
-    };
+    type: 'reject_call'
+    phoneNumber: string;
+  }
+  | {
+    type: "whatsapp";
+    phoneNumber?: string;
+    message?: string;
+  }
+  | {
+    type: "unknown";
+  };
 
 export type SupportedApp =
   | "youtube"

@@ -39,6 +39,7 @@ export default function HomeScreen() {
     ]);
 
   const [input, setInput] = useState("");
+  const [confirmationInput, setConfirmationInput] = useState("");
   const [isThinking, setIsThinking] =
     useState(false);
 
@@ -77,13 +78,23 @@ export default function HomeScreen() {
     setIsThinking(true);
 
     try {
-      const response =
-        await handleAssistantMessage(text);
+      console.log({confirmationInput});
+      const {response, needsConfirmation} =
+        await handleAssistantMessage(confirmationInput+text);
       Speech.speak(response, {
         language: "en-IN",
         pitch: 1,
         rate: 0.9,
       });
+      if (needsConfirmation) {
+                setConfirmationInput("\n " + " " + text+ "\n " + " " )
+      }else{
+        setConfirmationInput('')
+      }
+console.log({needsConfirmation});
+console.log('needsConfirmation'+needsConfirmation);
+
+
       const assistantMessage: ChatMessage = {
         id: `${Date.now()}-assistant`,
         role: "assistant",

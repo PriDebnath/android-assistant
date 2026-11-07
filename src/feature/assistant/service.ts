@@ -204,8 +204,6 @@ export async function findContact(name: string) {
 
 export async function callNumber(phoneNumber: string) {
   const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
-console.log('calling');
-
   if (Platform.OS === "android") {
     await IntentLauncher.startActivityAsync(
       // IntentLauncher.ActivityAction.c,
@@ -217,9 +215,17 @@ console.log('calling');
   } else {
     await Linking.openURL(`tel:${cleanedNumber}`);
   }
-    return {
+  return {
     success: true,
     message: `Calling ${phoneNumber}.`,
+  };
+}
+
+export async function callNumberConfirmation(phoneNumber: string) {
+  const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
+  return {
+    success: true,
+    message: `are you sure? calling ${phoneNumber}.`,
   };
 }
 
@@ -293,13 +299,18 @@ const AI_UNKNOWN = (
 
 export async function handleAssistantMessage(
   text: string,
-): Promise<string> {
+  // confirmation: boolean
+): Promise<
+  {
+    response: string;
+    needsConfirmation: boolean
+  }> {
   let intent = parseIntent(text);
   let UNKNOWN_INTENT: string = DEAFAULT_UNKNOWN;
 
   // Use Qwen3 only when the rule-based parser cannot understand.
   if (intent.type === "unknown") {
-      console.log('🤖 Using AI');
+    console.log('🤖 Using AI');
     try {
       console.log("[Assistant] Trying AI intent recognition...");
       intent = await parseIntentWithAI(text);
@@ -309,28 +320,55 @@ export async function handleAssistantMessage(
     } catch (error) {
       console.error("[Assistant] AI recognition failed:", error);
 
-      return "I couldn't understand that request. Please try again.";
+      return {
+        response: "I couldn't understand that request. Please try again.",
+        needsConfirmation: false,
+      }
     }
   }
 
   switch (intent.type) {
     case "open_app":
-      return (await openApp(intent.app)).message;
+      return {
+        response: (await openApp(intent.app)).message,
+        needsConfirmation: false,
+      }
 
     case "web_search":
-      return (await searchWeb(intent.query)).message;
+      return {
+        response: (await searchWeb(intent.query)).message,
+        needsConfirmation: false,
+      }
 
     case "calculate":
-      return calculate(intent.expression).message;
+      return {
+        response: calculate(intent.expression).message,
+        needsConfirmation: false,
+      }
 
     case "call":
-      return (await callNumber(intent.phoneNumber)).message;
+      return {
+        response: (await callNumberConfirmation(intent.phoneNumber)).message,
+        needsConfirmation: true,
+      }
+    case "confirm_call":
+      return {
+        response: (await callNumber(intent.phoneNumber)).message,
+        needsConfirmation: false,
+      }
+
 
     case "whatsapp":
-      return "WhatsApp actions aren't implemented yet.";
+      return {
+        response: "WhatsApp actions aren't implemented yet.",
+        needsConfirmation: false,
+      }
 
     case "unknown":
-    default: return UNKNOWN_INTENT
+    default: return {
+      response: UNKNOWN_INTENT,
+      needsConfirmation: false,
+    }
 
   }
 }
@@ -473,21 +511,43 @@ export function parseIntent(text: string): AssistantIntent {
     };
   }
 
-  // 2. Phone call
-  const callMatch = command.match(
-    /^(?:call|phone|dial|ring)\s+(.+)$/i,
+
+  // const confirmationMatch = /^(?:yes|yeah|yep|confirm|confirm call|proceed)\s+/i.test(command);//check at first
+const confirmationMatch =
+  /\b(?:yes|yeah|yep|confirm|proceed)\b/i.test(command);
+  const dialMatch = command.match(
+    /(?:call|phone|dial|ring)\s+(\+?[\d\s()-]+)/i,
   );
+  console.log({command, normalized});
+  
 
-  if (callMatch?.[1]) {
-    const phoneNumber = callMatch[1].trim();
+  if (dialMatch?.[1]) {
+    const phoneNumber = dialMatch[1].trim();
+  console.log({confirmationMatch,phoneNumber});
 
-    if (/^\+?[\d\s()-]+$/.test(phoneNumber) && /\d{5,}/.test(phoneNumber)) {
+    if (/\d{5,}/.test(phoneNumber)) {
       return {
-        type: "call",
+        type: confirmationMatch ? "confirm_call" : "call",
         phoneNumber,
       };
     }
   }
+
+  // // Reject calling
+  // const rejectCallMatch = command.match(
+  //   /^(?:no|nope|cancel|cancel call|don't call|stop calling)\s+(.+)$/i,
+  // );
+
+  // if (rejectCallMatch?.[1]) {
+  //   const phoneNumber = rejectCallMatch[1].trim();
+
+  //   if (/^\+?[\d\s()-]+$/.test(phoneNumber) && /\d{5,}/.test(phoneNumber)) {
+  //     return {
+  //       type: "reject_call",
+  //       phoneNumber,
+  //     };
+  //   }
+  // }
 
   // 3. Calculator
   if (
