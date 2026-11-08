@@ -1,33 +1,20 @@
-import {
-  Column,
-  Image,
-  Text,
-} from '@expo/ui/jetpack-compose';
 
-import { size } from '@expo/ui/jetpack-compose/modifiers';
 import { createWidget } from 'expo-widgets';
+import { size } from '@expo/ui/jetpack-compose/modifiers';
+import {Column,  Image,} from '@expo/ui/jetpack-compose';
 
-type MyWidgetProps = {
-  count: number;
-};
-
-const MyWidget = (props: MyWidgetProps) => {
+const MyWidget = () => {
   'widget';
   return (
     <Column>
       <Image
-        source={require('../../assets/images/pri.croped.png')}
-        contentDescription="Pri Assistant"
+        source={{ uri: 'pri' }}
+        contentDescription="Pri"
         contentScale="fit"
         modifiers={[size(80, 80)]}
       />
-
-      <Text>Pri Assistant</Text>
-      {/* <Text>{props.count}</Text> */}
     </Column>
   );
 };
 
-export default createWidget('MyWidget', MyWidget, {
-  count: 0,
-});
+export default createWidget('MyWidget', MyWidget, {});

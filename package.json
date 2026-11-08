@@ -54,6 +54,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "android:prebuild": "npx expo prebuild",
+    "c": "npx expo prebuild --clean",
     "android:generate:apk": "cd android && gradlew assembleRelease  && cd ..",
     "android:generate:apk:armeabi-v7a": "cd android && gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a && cd .."
   },

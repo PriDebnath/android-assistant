@@ -7,7 +7,7 @@ export default ({ }) => ({
     "slug": "my-mobile-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/pri.cropped.png",
+    "icon": "./assets/images/pri.cropped.2.png",
     "scheme": "mymobileapp",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -16,7 +16,7 @@ export default ({ }) => ({
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/pri.cropped.png",
+        "foregroundImage": "./assets/images/pri.cropped.2.png",
         // "backgroundImage": "./assets/images/android-icon-background.png",
         // "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -29,7 +29,7 @@ export default ({ }) => ({
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/pri.cropped.png"
+      "favicon": "./assets/images/pri.cropped.2.png"
     },
     "plugins": [
       "expo-router",
@@ -92,6 +92,7 @@ export default ({ }) => ({
           ]
         }
       ],
+        './plugins/withWidgetImage',
       [
         "expo-contacts",
         {
@@ -102,9 +103,9 @@ export default ({ }) => ({
         "expo-splash-screen",
         {
           // "backgroundColor": "#232323",
-          "image": "./assets/images/pri.cropped.png",
+          "image": "./assets/images/pri.cropped.2.png",
           "dark": {
-            "image": "./assets/images/pri.cropped.png"
+            "image": "./assets/images/pri.cropped.2.png"
             // "backgroundColor": "#000000"
           },
           "imageWidth": 200
