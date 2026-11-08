@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Button ,Text} from "react-native";
+import { Alert, Button ,Text,Image} from "react-native";
 
 import { downloadModel, isModelDownloaded } from "@/feature/assistant/ai/service/model-download.service";
 import { generateResponse } from "@/feature/assistant/ai/service/model-inference.service";
@@ -34,7 +34,16 @@ export default function ModelTest() {
     {
       isModelDownloaded()? (
         <Text>
- 🤖 
+ {/* 🤖  */}
+    <Image
+            source={require("@/assets/images/pri.png")}
+          style={{ 
+            width: 32,
+             height: 32,
+             borderRadius:32
+
+             }}
+          />
  {/* Using AI */}
         </Text>
       )

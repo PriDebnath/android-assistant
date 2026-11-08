@@ -5,6 +5,7 @@ import {
   Text,
   TextInput,
   View,
+  Image,
 } from "react-native";
 
 import {
@@ -223,7 +224,15 @@ export function ChatInput({
         ]}
       >
         <Text style={styles.micText}>
-          {isListening ? "■" : "🎤"}
+          {isListening ? (
+               <Image
+                   source={require('@/assets/images/tabIcons/stop.png')}
+ />
+          ) : (
+               <Image
+                   source={require('@/assets/images/tabIcons/mic.png')}
+ />
+          )}
         </Text>
       </Pressable>
 
@@ -235,7 +244,11 @@ export function ChatInput({
           !canSend && styles.disabled,
         ]}
       >
-        <Text style={styles.sendText}>↑</Text>
+        <Text style={styles.sendText}>
+            <Image
+                   source={require('@/assets/images/tabIcons/send.png')}
+ />
+        </Text>
       </Pressable>
     </View>
   );
