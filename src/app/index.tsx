@@ -24,6 +24,7 @@ import {
 // import type { ChatMessage } from "@/src/types/chat";
 import ModelTest from "@/feature/assistant/ai/component/test-ai-response";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Test from "@/feature/assistant/component/test";
 
 export default function HomeScreen() {
   const [messages, setMessages] =
@@ -151,6 +152,7 @@ console.log('needsConfirmation'+needsConfirmation);
 
             <View style={styles.status}>
               <View style={styles.statusDot} />
+              <Test/>
 <ModelTest/>
               {/* <Text style={styles.statusText}>
                 Local

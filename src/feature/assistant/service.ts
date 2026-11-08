@@ -1,9 +1,9 @@
-import * as Contacts from "expo-contacts";
-import * as WebBrowser from "expo-web-browser";
-import { Platform, Linking } from "react-native";
-import * as IntentLauncher from "expo-intent-launcher";
-import { parseIntentWithAI } from "./ai/service/ai-intent.service";
 import { AssistantIntent, SupportedApp } from "@/feature/assistant/types";
+import * as Contacts from "expo-contacts";
+import * as IntentLauncher from "expo-intent-launcher";
+import * as WebBrowser from "expo-web-browser";
+import { Linking, Platform } from "react-native";
+import { parseIntentWithAI } from "./ai/service/ai-intent.service";
 
 export const appAliases: Record<string, SupportedApp> = {
   // YouTube
@@ -198,11 +198,18 @@ export async function findContact(name: string) {
   if (!contact?.phoneNumbers?.length) {
     return null;
   }
-
   return contact.phoneNumbers[0].number;
 }
 
 export async function callNumber(phoneNumber: string) {
+    const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
+  return {
+    success: true,
+    message: `are you sure? calling ${phoneNumber}.`,
+  };
+}
+
+export async function callNumberConfirm(phoneNumber: string) {
   const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
   if (Platform.OS === "android") {
     await IntentLauncher.startActivityAsync(
@@ -221,13 +228,14 @@ export async function callNumber(phoneNumber: string) {
   };
 }
 
-export async function callNumberConfirmation(phoneNumber: string) {
+export async function callNumberReject(phoneNumber: string) {
   const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
   return {
     success: true,
-    message: `are you sure? calling ${phoneNumber}.`,
+    message: `not calling ${phoneNumber}.`,
   };
 }
+
 
 // export async function handleAssistantMessage(
 //   text: string,
@@ -348,15 +356,19 @@ export async function handleAssistantMessage(
 
     case "call":
       return {
-        response: (await callNumberConfirmation(intent.phoneNumber)).message,
+        response: (await callNumber (intent.phoneNumber)).message,
         needsConfirmation: true,
       }
     case "confirm_call":
       return {
-        response: (await callNumber(intent.phoneNumber)).message,
+        response: (await  callNumberConfirm(intent.phoneNumber)).message,
         needsConfirmation: false,
       }
-
+    case "reject_call":
+      return {
+        response: (await callNumberReject(intent.phoneNumber)).message,
+        needsConfirmation: false,
+      }
 
     case "whatsapp":
       return {
@@ -513,42 +525,31 @@ export function parseIntent(text: string): AssistantIntent {
 
 
   // const confirmationMatch = /^(?:yes|yeah|yep|confirm|confirm call|proceed)\s+/i.test(command);//check at first
-const confirmationMatch =
-  /\b(?:yes|yeah|yep|confirm|proceed)\b/i.test(command);
+  const confirmationMatch =
+    /\b(?:yes|yeah|yep|yea|confirm|proceed)\b/i.test(command);
+
+  const rejectCallMatch =
+    /\b(?:no|nope|cancel|reject|stop calling|cancel call|don't call|do not call)\b/i.test(command);
+
   const dialMatch = command.match(
     /(?:call|phone|dial|ring)\s+(\+?[\d\s()-]+)/i,
   );
-  console.log({command, normalized});
-  
 
   if (dialMatch?.[1]) {
     const phoneNumber = dialMatch[1].trim();
-  console.log({confirmationMatch,phoneNumber});
 
     if (/\d{5,}/.test(phoneNumber)) {
       return {
-        type: confirmationMatch ? "confirm_call" : "call",
+        type: rejectCallMatch
+          ? "reject_call"
+          : confirmationMatch
+            ? "confirm_call"
+            : "call",
         phoneNumber,
       };
     }
   }
-
-  // // Reject calling
-  // const rejectCallMatch = command.match(
-  //   /^(?:no|nope|cancel|cancel call|don't call|stop calling)\s+(.+)$/i,
-  // );
-
-  // if (rejectCallMatch?.[1]) {
-  //   const phoneNumber = rejectCallMatch[1].trim();
-
-  //   if (/^\+?[\d\s()-]+$/.test(phoneNumber) && /\d{5,}/.test(phoneNumber)) {
-  //     return {
-  //       type: "reject_call",
-  //       phoneNumber,
-  //     };
-  //   }
-  // }
-
+ 
   // 3. Calculator
   if (
     // /^(calculate|compute|solve|what is|what's|how much is)\s+/i.test(command)
