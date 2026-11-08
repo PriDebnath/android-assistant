@@ -1,10 +1,23 @@
 import { StyleSheet, Text, View } from "react-native";
+const messages = [
+  "Thinking",
+  "Cooking",
+  "Working",
+  "Creating",
+  "Exploring",
+  "Thinking hard",
+  "Almost there",
+  "Processing",
+  "Brewing",
+  "Figuring it out",
+];
 
 export function TypingIndicator() {
+  const message = messages[Math.floor(Math.random() * messages.length)];
   return (
     <View style={styles.container}>
       <View style={styles.bubble}>
-        <Text style={styles.text}>Thinking...</Text>
+        <Text style={styles.text}>{message}...</Text>
       </View>
     </View>
   );

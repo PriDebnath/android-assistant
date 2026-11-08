@@ -104,13 +104,16 @@ export default ({ }) => ({
         {
           // "backgroundColor": "#232323",
           "image": "./assets/images/pri.cropped.2.png",
-          "dark": {
-            "image": "./assets/images/pri.cropped.2.png"
-            // "backgroundColor": "#000000"
-          },
-          "imageWidth": 200
+             imageWidth: 360,
+          resizeMode: "cover",
+          // "dark": {
+          //   "image": "./assets/images/pri.cropped.2.png"
+          //   // "backgroundColor": "#000000"
+          // },
+          // "imageWidth": 200
         }
       ]
+      
     ],
     "experiments": {
       "typedRoutes": true,

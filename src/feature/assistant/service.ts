@@ -1,10 +1,7 @@
 import { AssistantIntent, SupportedApp } from "@/feature/assistant/types";
-import * as Contacts from "expo-contacts";
-import * as IntentLauncher from "expo-intent-launcher";
-import * as WebBrowser from "expo-web-browser";
 import { Linking, Platform } from "react-native";
 import { parseIntentWithAI } from "./ai/service/ai-intent.service";
-import { findContact, playYoutube, playYoutubeMusic } from "./helper";
+import { calculate, callNumber, callNumberConfirm, callNumberReject, findContact, playYoutube, playYoutubeMusic, searchWeb } from "./helper";
 
 export const appAliases: Record<string, SupportedApp> = {
   // YouTube
@@ -122,53 +119,7 @@ function getAppName(app: SupportedApp) {
 }
 
 
-export async function searchWeb(query: string) {
-  const url =
-    `https://www.google.com/search?q=` +
-    encodeURIComponent(query);
 
-  await WebBrowser.openBrowserAsync(url);
-
-  return {
-    success: true,
-    message: `Searching for "${query}".`,
-  };
-}
-
-
-export function calculate(expression: string) {
-  const cleaned = expression
-    .replace(/[^0-9+\-*/().% ]/g, "")
-    .trim();
-
-  if (!cleaned) {
-    return {
-      success: false,
-      message: "I couldn't understand that calculation.",
-    };
-  }
-
-  try {
-    // Basic arithmetic only.
-    const result = Function(
-      `"use strict"; return (${cleaned})`,
-    )();
-
-    if (typeof result !== "number" || !Number.isFinite(result)) {
-      throw new Error("Invalid result");
-    }
-
-    return {
-      success: true,
-      message: String(result),
-    };
-  } catch {
-    return {
-      success: false,
-      message: "I couldn't calculate that.",
-    };
-  }
-}
 
 // export async function callNumber(phoneNumber: string) {
 //   const url = `tel:${phoneNumber}`;
@@ -212,40 +163,6 @@ export function calculate(expression: string) {
 //   return contact.phoneNumbers[0].number;
 // }
 
-export async function callNumber(phoneNumber: string) {
-  const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
-  return {
-    success: true,
-    message: `are you sure? calling ${phoneNumber}.`,
-  };
-}
-
-export async function callNumberConfirm(phoneNumber: string) {
-  const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
-  if (Platform.OS === "android") {
-    await IntentLauncher.startActivityAsync(
-      // IntentLauncher.ActivityAction.c,
-      "android.intent.action.CALL",
-      {
-        data: `tel:${cleanedNumber}`,
-      },
-    );
-  } else {
-    await Linking.openURL(`tel:${cleanedNumber}`);
-  }
-  return {
-    success: true,
-    message: `Calling ${phoneNumber}.`,
-  };
-}
-
-export async function callNumberReject(phoneNumber: string) {
-  const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
-  return {
-    success: true,
-    message: `not calling ${phoneNumber}.`,
-  };
-}
 
 
 // export async function handleAssistantMessage(
