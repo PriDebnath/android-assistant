@@ -118,40 +118,75 @@ export async function playYoutubeMusic(query: string): ActionResponse {
     }
 }
 
-export async function playYoutube(query: string): ActionResponse {
-    if (!query) {
-        return {
-            success: false,
-            message: "Please tell me the video title."
-        }
-    }
-    try {
-        let video = await getFirstYoutubeVideo(query)
-        if (video) {
-            const musicUrl =
-                `https://youtube.com/watch?v=${video.videoId}`;
-            await Linking.openURL(musicUrl);
-            return {
-                success: true,
-                message: `Playing ${video.title} on YouTube.`
-            }
-        } else {
-            const searchUrl = `https://youtube.com/search?q=${encodeURIComponent(query)}`;
-            await Linking.openURL(searchUrl);
-            return {
-                success: false,
-                message: `Searching ${query} on YouTube.`
-            }
-        }
-    } catch (error) {
-        console.error("Video playback error:", error);
-        return {
-            success: false,
-            message: `Couldn't find or open ${query}.`
-        }
-    }
-}
 
+export async function playYoutube(query: string): ActionResponse{
+  const cleanQuery = query.trim();
+
+  if (!cleanQuery) {
+    return {
+      success: false,
+      message: "Please tell me the video title.",
+    };
+  }
+
+  try {
+    const video = await getFirstYoutubeVideo(cleanQuery);
+
+    if (!video?.videoId) {
+      await Linking.openURL(
+        `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQuery)}`,
+      );
+
+      return {
+        success: false,
+        message: `No video found. Searching YouTube for ${cleanQuery}.`,
+      };
+    }
+
+    const videoId = video.videoId;
+
+    if (Platform.OS === "android") {
+      try {
+        // Open the video in the YouTube Android app.
+        await Linking.openURL(`vnd.youtube:${videoId}`);
+
+        return {
+          success: true,
+          message: `Opening ${video.title} on YouTube.`,
+        };
+      } catch (error) {
+        console.log("YouTube app unavailable:", error);
+      }
+    }
+
+    await Linking.openURL(
+      `https://www.youtube.com/watch?v=${videoId}`,
+    );
+
+    return {
+      success: true,
+      message: `Opening ${video.title} on YouTube.`,
+    };
+  } catch (error) {
+    console.error("Video playback error:", error);
+
+    try {
+      await Linking.openURL(
+        `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQuery)}`,
+      );
+
+      return {
+        success: false,
+        message: `Searching YouTube for ${cleanQuery}.`,
+      };
+    } catch {
+      return {
+        success: false,
+        message: `Couldn't find or open ${cleanQuery}.`,
+      };
+    }
+  }
+}
 
 export async function playMusic(cleanQuery: string): ActionResponse {
     if (!cleanQuery) {

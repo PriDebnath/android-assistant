@@ -38,6 +38,14 @@ export type AssistantIntent =
     phoneNumber?: string;
     message?: string;
   }
+      | {
+    type: "play_youtube_music";
+    query: string;
+  }
+      | {
+    type: "play_youtube_video";
+    query: string;
+  }
   | {
     type: "unknown";
   };

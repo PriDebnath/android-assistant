@@ -4,11 +4,12 @@ import * as IntentLauncher from "expo-intent-launcher";
 import * as WebBrowser from "expo-web-browser";
 import { Linking, Platform } from "react-native";
 import { parseIntentWithAI } from "./ai/service/ai-intent.service";
+import { playYoutube, playYoutubeMusic } from "./helper";
 
 export const appAliases: Record<string, SupportedApp> = {
   // YouTube
-  youtube: "youtube",
-  "you tube": "youtube",
+  // youtube: "youtube",
+  // "you tube": "youtube",
 
   // Chrome
   chrome: "chrome",
@@ -34,13 +35,23 @@ export const appAliases: Record<string, SupportedApp> = {
 
 
 const appUrls: Record<SupportedApp, string> = {
-  youtube: "youtube://",
+  youtube: "vnd.youtube://",
   chrome: "googlechrome://",
   whatsapp: "whatsapp://",
   spotify: "spotify://",
   maps: "geo:0,0?q=",
   settings: "app-settings:",
 };
+
+// const appUrls: Record<SupportedApp, string> = {
+//   // youtube: "youtube://results?search_query=cocomelon",
+//   youtube: "vnd.youtube://results?search_query=cocomelon",
+//   chrome: "googlechrome:///search?q=cocomelon",
+//   whatsapp: "whatsapp://",
+//   spotify: "spotify://search/cocomelon",
+//   maps: "geo:0,0?q=kolkata",
+//   settings: "app-settings:",
+// };
 
 const webFallbacks: Partial<Record<SupportedApp, string>> = {
   youtube: "https://www.youtube.com",
@@ -202,7 +213,7 @@ export async function findContact(name: string) {
 }
 
 export async function callNumber(phoneNumber: string) {
-    const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
+  const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
   return {
     success: true,
     message: `are you sure? calling ${phoneNumber}.`,
@@ -348,6 +359,20 @@ export async function handleAssistantMessage(
         needsConfirmation: false,
       }
 
+    case "play_youtube_music":
+      return {
+        response: (await playYoutubeMusic(intent.query)).message,
+        needsConfirmation: false,
+      }
+
+
+    case "play_youtube_video": {
+      return {
+        response: (await playYoutube(intent.query)).message,
+        needsConfirmation: false,
+      }
+    }
+
     case "calculate":
       return {
         response: calculate(intent.expression).message,
@@ -356,12 +381,12 @@ export async function handleAssistantMessage(
 
     case "call":
       return {
-        response: (await callNumber (intent.phoneNumber)).message,
+        response: (await callNumber(intent.phoneNumber)).message,
         needsConfirmation: true,
       }
     case "confirm_call":
       return {
-        response: (await  callNumberConfirm(intent.phoneNumber)).message,
+        response: (await callNumberConfirm(intent.phoneNumber)).message,
         needsConfirmation: false,
       }
     case "reject_call":
@@ -549,7 +574,66 @@ export function parseIntent(text: string): AssistantIntent {
       };
     }
   }
- 
+
+  const youtubeVideoMatch = command.match(
+    /^(?:play|watch)\s+(?:a\s+)?(?:(?:youtube)\s+)?video(?:\s+of|\s+about)?\s+(.+)$/i,
+  );
+
+  if (youtubeVideoMatch?.[1]) {
+    return {
+      type: "play_youtube_video",
+      query: youtubeVideoMatch[1].trim(),
+    };
+  }
+
+  // Example: watch Believer on YouTube
+  const watchYoutubeMatch = command.match(
+    /^(?:watch|play)\s+(.+?)\s+on\s+youtube$/i,
+  );
+
+  if (watchYoutubeMatch?.[1]) {
+    return {
+      type: "play_youtube_video",
+      query: watchYoutubeMatch[1].trim(),
+    };
+  }
+
+  // 4. YouTube Music
+  const youtubeMusicMatch = command.match(
+    /^(?:play|listen\s+to|put\s+on)\s+(?:(?:youtube\s+)?music|song)\s+(?:for\s+)?(.+)$/i,
+  );
+
+  if (youtubeMusicMatch?.[1]) {
+    return {
+      type: "play_youtube_music",
+      query: youtubeMusicMatch[1].trim(),
+    };
+  }
+
+  // Example: play Believer on YouTube Music
+  const musicSuffixMatch = command.match(
+    /^(?:play|listen\s+to|put\s+on)\s+(.+?)\s+on\s+(?:youtube\s+)?music$/i,
+  );
+
+  if (musicSuffixMatch?.[1]) {
+    return {
+      type: "play_youtube_music",
+      query: musicSuffixMatch[1].trim(),
+    };
+  }
+
+  // Default: play <song name> means YouTube Music
+  const playMusicMatch = command.match(
+    /^(?:play|listen\s+to|put\s+on)\s+(.+)$/i,
+  );
+
+  if (playMusicMatch?.[1]) {
+    return {
+      type: "play_youtube_music",
+      query: playMusicMatch[1].trim(),
+    };
+  }
+
   // 3. Calculator
   if (
     // /^(calculate|compute|solve|what is|what's|how much is)\s+/i.test(command)
@@ -583,3 +667,4 @@ export function parseIntent(text: string): AssistantIntent {
 
   return { type: "unknown" };
 }
+
