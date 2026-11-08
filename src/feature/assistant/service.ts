@@ -4,7 +4,7 @@ import * as IntentLauncher from "expo-intent-launcher";
 import * as WebBrowser from "expo-web-browser";
 import { Linking, Platform } from "react-native";
 import { parseIntentWithAI } from "./ai/service/ai-intent.service";
-import { playYoutube, playYoutubeMusic } from "./helper";
+import { findContact, playYoutube, playYoutubeMusic } from "./helper";
 
 export const appAliases: Record<string, SupportedApp> = {
   // YouTube
@@ -191,26 +191,26 @@ export function calculate(expression: string) {
 // }
 
 
-export async function findContact(name: string) {
-  const { status } = await Contacts.requestPermissionsAsync();
+// export async function findContact(name: string) {
+//   const { status } = await Contacts.requestPermissionsAsync();
 
-  if (status !== "granted") {
-    throw new Error("Contacts permission denied");
-  }
+//   if (status !== "granted") {
+//     throw new Error("Contacts permission denied");
+//   }
 
-  const { data } = await Contacts.getContactsAsync({
-    fields: [Contacts.Fields.PhoneNumbers],
-  });
+//   const { data } = await Contacts.getContactsAsync({
+//     fields: [Contacts.Fields.PhoneNumbers],
+//   });
 
-  const contact = data.find((item) =>
-    item.name?.toLowerCase().includes(name.toLowerCase())
-  );
+//   const contact = data.find((item) =>
+//     item.name?.toLowerCase().includes(name.toLowerCase())
+//   );
 
-  if (!contact?.phoneNumbers?.length) {
-    return null;
-  }
-  return contact.phoneNumbers[0].number;
-}
+//   if (!contact?.phoneNumbers?.length) {
+//     return null;
+//   }
+//   return contact.phoneNumbers[0].number;
+// }
 
 export async function callNumber(phoneNumber: string) {
   const cleanedNumber = phoneNumber.replace(/[^\d+]/g, "");
@@ -316,99 +316,6 @@ const AI_UNKNOWN = (
   "• Call 9876543210"
 );
 
-export async function handleAssistantMessage(
-  text: string,
-  // confirmation: boolean
-): Promise<
-  {
-    response: string;
-    needsConfirmation: boolean
-  }> {
-  let intent = parseIntent(text);
-  let UNKNOWN_INTENT: string = DEAFAULT_UNKNOWN;
-
-  // Use Qwen3 only when the rule-based parser cannot understand.
-  if (intent.type === "unknown") {
-    console.log('🤖 Using AI');
-    try {
-      console.log("[Assistant] Trying AI intent recognition...");
-      intent = await parseIntentWithAI(text);
-      console.log("[Assistant] AI intent:", intent);
-      UNKNOWN_INTENT = AI_UNKNOWN;
-
-    } catch (error) {
-      console.error("[Assistant] AI recognition failed:", error);
-
-      return {
-        response: "I couldn't understand that request. Please try again.",
-        needsConfirmation: false,
-      }
-    }
-  }
-
-  switch (intent.type) {
-    case "open_app":
-      return {
-        response: (await openApp(intent.app)).message,
-        needsConfirmation: false,
-      }
-
-    case "web_search":
-      return {
-        response: (await searchWeb(intent.query)).message,
-        needsConfirmation: false,
-      }
-
-    case "play_youtube_music":
-      return {
-        response: (await playYoutubeMusic(intent.query)).message,
-        needsConfirmation: false,
-      }
-
-
-    case "play_youtube_video": {
-      return {
-        response: (await playYoutube(intent.query)).message,
-        needsConfirmation: false,
-      }
-    }
-
-    case "calculate":
-      return {
-        response: calculate(intent.expression).message,
-        needsConfirmation: false,
-      }
-
-    case "call":
-      return {
-        response: (await callNumber(intent.phoneNumber)).message,
-        needsConfirmation: true,
-      }
-    case "confirm_call":
-      return {
-        response: (await callNumberConfirm(intent.phoneNumber)).message,
-        needsConfirmation: false,
-      }
-    case "reject_call":
-      return {
-        response: (await callNumberReject(intent.phoneNumber)).message,
-        needsConfirmation: false,
-      }
-
-    case "whatsapp":
-      return {
-        response: "WhatsApp actions aren't implemented yet.",
-        needsConfirmation: false,
-      }
-
-    case "unknown":
-    default: return {
-      response: UNKNOWN_INTENT,
-      needsConfirmation: false,
-    }
-
-  }
-}
 
 const appNames = Object.keys(appAliases).sort(
   (a, b) => b.length - a.length,
@@ -527,18 +434,346 @@ function extractExpression(text: string): string | null {
   return expression.trim();
 }
 
+export function extractPhoneNumbers(text: string): string[] {
+    const matches = text.match(
+        /(?:\+?\d[\d\s()-]{5,}\d)/g
+    ) || [];
+
+    return [
+        ...new Set(
+            matches.map(number =>
+                number.replace(/[\s()-]/g, "").trim()
+            )
+        ),
+    ];
+}
+
+function parseContactSelectionIndex(reply: string): number | undefined {
+  const value = reply
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?,]/g, "")
+    .replace(/\s+/g, " ");
+
+  const numericMatch = value.match(
+    /^(?:(?:select|choose|call|dial)\s+)?(?:(?:the\s+)?(?:number|option|contact)\s+)?(\d{1,2})(?:st|nd|rd|th)?(?:\s+(?:one|contact))?$/i
+  );
+
+  if (numericMatch?.[1]) {
+    return Number(numericMatch[1]);
+  }
+
+  const numberWords: Record<string, number> = {
+    first: 1,
+    one: 1,
+    second: 2,
+    two: 2,
+    third: 3,
+    three: 3,
+    fourth: 4,
+    four: 4,
+    fifth: 5,
+    five: 5,
+    sixth: 6,
+    six: 6,
+    seventh: 7,
+    seven: 7,
+    eighth: 8,
+    eight: 8,
+    ninth: 9,
+    nine: 9,
+    tenth: 10,
+    ten: 10,
+  };
+
+  const wordMatch = value.match(
+    /^(?:(?:select|choose|call|dial)\s+)?(?:the\s+)?(first|one|second|two|third|three|fourth|four|fifth|five|sixth|six|seventh|seven|eighth|eight|ninth|nine|tenth|ten)(?:\s+(?:one|contact))?$/i
+  );
+
+  if (wordMatch?.[1]) {
+    return numberWords[wordMatch[1]];
+  }
+
+  return undefined;
+}
+
+// function getFirstPhoneNumber(value: string): string | undefined {
+//   const numbers = extractPhoneNumbers(value);
+
+//   if (numbers?.length) {
+//     return numbers[0];
+//   }
+
+//   return value.match(/\+?\d[\d\s()-]{4,}\d/)?.[0]?.trim();
+// }
+
+function getFirstPhoneNumber(value: string): string | undefined {
+  const match = value.match(/\+?\d[\d\s()-]*\d|\d/);
+
+  return match?.[0]?.replace(/[^\d+]/g, "");
+}
+
+// function getContactPhoneNumber(
+//   contactContext: string,
+//   contactIndex: number
+// ): string | undefined {
+
+//   // Multiple contacts:
+//   // 1. John, phone: 9876543210
+//   // 2. Alex, phone: 9123456780
+
+//   const numberedLine = contactContext.match(
+//     new RegExp(
+//       `^[\\t ]*${contactIndex}\\.[\\t ]*.*?\\bphone:\\s*([^\\r\\n]+)`,
+//       "im"
+//     )
+//   );
+
+//   if (numberedLine?.[1]) {
+//     return getFirstPhoneNumber(numberedLine[1]);
+//   }
+
+//   // Single contact:
+//   // Found John. Phone number: 9876543210. Contact index: 1.
+
+//   const singleContactIndex = contactContext.match(
+//     /Contact index:\s*(\d+)/i
+//   );
+
+//   if (Number(singleContactIndex?.[1]) === contactIndex) {
+//     const phoneMatch = contactContext.match(
+//       /Phone number:\s*([^\r\n]*?)(?:\s*Contact index:\s*\d+\.?)?\s*$/im
+//     );
+
+//     if (phoneMatch?.[1]) {
+//       return getFirstPhoneNumber(phoneMatch[1]);
+//     }
+//   }
+
+//   return undefined;
+// }
+
+function getContactPhoneNumber(
+  contactContext: string,
+  contactIndex: number
+): string | undefined {
+
+  const lines = contactContext.split(/\r?\n/);
+
+  // Find the exact numbered contact line.
+  const selectedLine = lines.find(line =>
+    new RegExp(`^\\s*${contactIndex}\\.\\s*`).test(line)
+  );
+
+  console.log("[Selected Contact Line]", selectedLine);
+
+  if (selectedLine) {
+    const phoneMatch = selectedLine.match(
+      /\bphone:\s*(.+)$/i
+    );
+
+    if (phoneMatch?.[1]) {
+      return getFirstPhoneNumber(phoneMatch[1]);
+    }
+  }
+
+  // Single contact fallback.
+  const singleContactIndex = contactContext.match(
+    /Contact index:\s*(\d+)/i
+  );
+
+  if (Number(singleContactIndex?.[1]) === contactIndex) {
+    const phoneMatch = contactContext.match(
+      /Phone number:\s*(.+?)(?=\s*Contact index:|$)/i
+    );
+
+    if (phoneMatch?.[1]) {
+      return getFirstPhoneNumber(phoneMatch[1]);
+    }
+  }
+
+  return undefined;
+}
 
 export function parseIntent(text: string): AssistantIntent {
-  const normalized = normalizeText(text);
+  const rawText = text.trim();
+
+  if (!rawText) {
+    return { type: "unknown" };
+  }
+
+  // =====================================================
+  // 1. CONTACT SELECTION FROM PREVIOUS RESPONSE
+  // =====================================================
+
+const findContactContext = rawText.match(
+  /find_contact confirmation:\s*([\s\S]*?)\n\s*User reply:\s*([\s\S]*)$/i
+);
+
+if (findContactContext) {
+ const findContactContext = rawText.match(
+  /find_contact confirmation:\s*([\s\S]*?)\n\s*User reply:\s*([\s\S]*)$/i
+);
+
+if (findContactContext) {
+  const previousResponse = findContactContext[1];
+  const userReply = findContactContext[2].trim();
+
+  // Explicit call command takes priority over contact selection.
+  const directDialMatch = userReply.match(
+    /^(?:please\s+)?(?:call|phone|dial|ring)\s+(.+)$/i
+  );
+
+  if (directDialMatch?.[1]) {
+    const target = directDialMatch[1]
+      .trim()
+      .replace(/[.!?,]+$/, "");
+
+    const isPhoneNumber = /^[+\d\s()-]+$/.test(target);
+    const digitCount = target.replace(/\D/g, "").length;
+
+    if (isPhoneNumber && digitCount >= 3) {
+      return {
+        type: "call",
+        phoneNumber: target.replace(/[^\d+]/g, ""),
+      };
+    }
+  }
+
+  // Otherwise, select a contact by index.
+  const contactIndex = parseContactSelectionIndex(userReply);
+
+  if (!contactIndex || contactIndex < 1) {
+    return { type: "unknown" };
+  }
+
+  const phoneNumber = getContactPhoneNumber(
+    previousResponse,
+    contactIndex
+  );
+
+  console.log("[Contact Selection]", {
+    contactIndex,
+    phoneNumber,
+  });
+
+  if (phoneNumber) {
+    return {
+      type: "call",
+      phoneNumber,
+    };
+  }
+
+  return { type: "unknown" };
+}
+}
+  // =====================================================
+  // 2. CALL CONFIRMATION / REJECTION
+  // =====================================================
+
+  const callContext = rawText.match(
+    /call confirmation:\s*([\s\S]*?)\n\s*User reply:\s*([\s\S]*)$/i
+  );
+
+  if (callContext) {
+    const previousResponse = callContext[1];
+    const userReply = callContext[2]
+      .trim()
+      .toLowerCase()
+      .replace(/[.!?,]/g, "")
+      .replace(/\s+/g, " ");
+
+    const phoneNumber = getFirstPhoneNumber(previousResponse);
+
+    const confirmationMatch =
+      /^(?:yes|yeah|yep|yea|y|confirm|confirmed|proceed|sure|sure thing|go ahead|do it|please do|call)(?: please)?$/i.test(
+        userReply
+      );
+
+    const rejectionMatch =
+      /^(?:no|nope|nah|n|cancel|reject|stop|dont call|do not call|no thanks)$/i.test(
+        userReply
+      );
+
+    console.log("[Call Confirmation]", {
+      userReply,
+      phoneNumber,
+      confirmationMatch,
+      rejectionMatch,
+    });
+
+    if (phoneNumber && confirmationMatch) {
+      return {
+        type: "confirm_call",
+        phoneNumber,
+      };
+    }
+
+    if (phoneNumber && rejectionMatch) {
+      return {
+        type: "reject_call",
+        phoneNumber,
+      };
+    }
+
+    return { type: "unknown" };
+  }
+
+  // =====================================================
+  // 3. NORMAL INTENT PARSING
+  // =====================================================
+
+  const normalized = normalizeText(rawText);
   const command = removePolitePrefix(normalized);
 
   if (!command) {
     return { type: "unknown" };
   }
 
-  // 1. Web search (check before app detection)
+  console.log("[Intent Parser]", {
+    normalized,
+    command,
+  });
+
+  // =====================================================
+  // 4. FIND CONTACT BY EXPLICIT CONTACT / NUMBER REQUEST
+  // =====================================================
+
+  const explicitContactMatch = command.match(
+    /^(?:find|search(?:\s+for)?|look\s+for|look\s+up|get|show(?:\s+me)?|google)\s+(?:(?:the\s+)?contact(?:\s+(?:named|called))?\s+|(?:the\s+)?(?:phone\s+)?number\s+(?:of|for)\s+)(.+)$/i
+  );
+
+  if (explicitContactMatch?.[1]) {
+    return {
+      type: "find_contact",
+      phoneNumber: explicitContactMatch[1]
+        .trim()
+        .replace(/[?.!,]+$/, ""),
+    };
+  }
+
+  // Examples:
+  // What's John's number?
+  // What is John's phone number?
+  // Tell me John's contact.
+
+  const contactSuffixMatch = command.match(
+    /^(?:who\s+is|what\s+is|what's|tell\s+me)\s+(.+?)(?:'s)?\s+(?:contact|phone\s+number|number)$/i
+  );
+
+  if (contactSuffixMatch?.[1]) {
+    return {
+      type: "find_contact",
+      phoneNumber: contactSuffixMatch[1].trim(),
+    };
+  }
+
+  // =====================================================
+  // 5. WEB SEARCH
+  // =====================================================
+
   const searchMatch = command.match(
-    /^(?:search(?:\s+for)?|google|look\s+up|find\s+information\s+about)\s+(.+)$/i,
+    /^(?:search(?:\s+for)?|google|look\s+up|find\s+information\s+about)\s+(.+)$/i
   );
 
   if (searchMatch?.[1]) {
@@ -548,35 +783,100 @@ export function parseIntent(text: string): AssistantIntent {
     };
   }
 
+  // =====================================================
+// 6. CALL: NUMBER OR CONTACT NAME
+// =====================================================
 
-  // const confirmationMatch = /^(?:yes|yeah|yep|confirm|confirm call|proceed)\s+/i.test(command);//check at first
-  const confirmationMatch =
-    /\b(?:yes|yeah|yep|yea|confirm|proceed)\b/i.test(command);
+const callMatch = command.match(
+  /^(?:please\s+)?(?:call|phone|dial|ring)\s+(.+)$/i
+);
 
-  const rejectCallMatch =
-    /\b(?:no|nope|cancel|reject|stop calling|cancel call|don't call|do not call)\b/i.test(command);
+if (callMatch?.[1]) {
+  const target = callMatch[1]
+    .trim()
+    .replace(/[.!?,]+$/, "");
 
-  const dialMatch = command.match(
-    /(?:call|phone|dial|ring)\s+(\+?[\d\s()-]+)/i,
+  const isPhoneNumber = /^[+\d\s()-]+$/.test(target);
+  const digitCount = target.replace(/\D/g, "").length;
+
+  if (isPhoneNumber && digitCount >= 3) {
+    return {
+      type: "call",
+      phoneNumber: target.replace(/[^\d+]/g, ""),
+    };
+  }
+
+  // It's a contact name, not a phone number.
+  return {
+    type: "find_contact",
+    phoneNumber: target,
+  };
+}
+
+  // =====================================================
+  // 6. CALL DIRECT PHONE NUMBER
+  // =====================================================
+
+  // const dialMatch = command.match(
+  //   /^(?:please\s+)?(?:call|phone|dial|ring)\s+(\+?[\d][\d\s()-]*[\d])$/i
+  // );
+
+  // if (dialMatch?.[1]) {
+  //   const phoneNumber = dialMatch[1].trim();
+
+  //   if ((phoneNumber.match(/\d/g) || []).length >= 5) {
+  //     return {
+  //       type: "call",
+  //       phoneNumber,
+  //     };
+  //   }
+  // }
+
+  // =====================================================
+  // 7. CALL CONTACT BY NAME
+  // =====================================================
+
+  // const callContactMatch = command.match(
+  //   /^(?:please\s+)?(?:call|phone|dial|ring)\s+(.+)$/i
+  // );
+
+  // if (callContactMatch?.[1]) {
+  //   return {
+  //     type: "find_contact",
+  //     phoneNumber: callContactMatch[1].trim(),
+  //   };
+  // }
+
+  // =====================================================
+  // 8. FIND CONTACT BY NAME
+  // =====================================================
+
+  const findContactMatch = command.match(
+    /^(?:find|look\s+for|get|show(?:\s+me)?|who\s+is)\s+(.+)$/i
   );
 
-  if (dialMatch?.[1]) {
-    const phoneNumber = dialMatch[1].trim();
+  if (findContactMatch?.[1]) {
+    const contactQuery = findContactMatch[1]
+      .trim()
+      .replace(/[?.!,]+$/, "")
+      .replace(/'s\s+(?:phone\s+number|number|contact)$/i, "")
+      .replace(/\s+(?:phone\s+number|number|contact)$/i, "")
+      .trim();
 
-    if (/\d{5,}/.test(phoneNumber)) {
+    if (contactQuery) {
       return {
-        type: rejectCallMatch
-          ? "reject_call"
-          : confirmationMatch
-            ? "confirm_call"
-            : "call",
-        phoneNumber,
+        type: "find_contact",
+        phoneNumber: contactQuery,
       };
     }
   }
 
+  // =====================================================
+  // 9. YOUTUBE VIDEO
+  // =====================================================
+
   const youtubeVideoMatch = command.match(
-    /^(?:play|watch)\s+(?:a\s+)?(?:(?:youtube)\s+)?video(?:\s+of|\s+about)?\s+(.+)$/i,
+    /^(?:play|watch)\s+(?:a\s+)?(?:(?:youtube)\s+)?video(?:\s+of|\s+about)?\s+(.+)$/i
   );
 
   if (youtubeVideoMatch?.[1]) {
@@ -586,9 +886,8 @@ export function parseIntent(text: string): AssistantIntent {
     };
   }
 
-  // Example: watch Believer on YouTube
   const watchYoutubeMatch = command.match(
-    /^(?:watch|play)\s+(.+?)\s+on\s+youtube$/i,
+    /^(?:watch|play)\s+(.+?)\s+on\s+youtube$/i
   );
 
   if (watchYoutubeMatch?.[1]) {
@@ -598,9 +897,12 @@ export function parseIntent(text: string): AssistantIntent {
     };
   }
 
-  // 4. YouTube Music
+  // =====================================================
+  // 10. YOUTUBE MUSIC
+  // =====================================================
+
   const youtubeMusicMatch = command.match(
-    /^(?:play|listen\s+to|put\s+on)\s+(?:(?:youtube\s+)?music|song)\s+(?:for\s+)?(.+)$/i,
+    /^(?:play|listen\s+to|put\s+on)\s+(?:(?:youtube\s+)?music|song)\s+(?:for\s+)?(.+)$/i
   );
 
   if (youtubeMusicMatch?.[1]) {
@@ -610,9 +912,8 @@ export function parseIntent(text: string): AssistantIntent {
     };
   }
 
-  // Example: play Believer on YouTube Music
   const musicSuffixMatch = command.match(
-    /^(?:play|listen\s+to|put\s+on)\s+(.+?)\s+on\s+(?:youtube\s+)?music$/i,
+    /^(?:play|listen\s+to|put\s+on)\s+(.+?)\s+on\s+(?:youtube\s+)?music$/i
   );
 
   if (musicSuffixMatch?.[1]) {
@@ -622,22 +923,14 @@ export function parseIntent(text: string): AssistantIntent {
     };
   }
 
-  // Default: play <song name> means YouTube Music
-  const playMusicMatch = command.match(
-    /^(?:play|listen\s+to|put\s+on)\s+(.+)$/i,
-  );
+  // =====================================================
+  // 11. CALCULATOR
+  // =====================================================
 
-  if (playMusicMatch?.[1]) {
-    return {
-      type: "play_youtube_music",
-      query: playMusicMatch[1].trim(),
-    };
-  }
-
-  // 3. Calculator
   if (
-    // /^(calculate|compute|solve|what is|what's|how much is)\s+/i.test(command)
-    /^(calculate|compute|solve|what is|what's|how much is|multiply|divide|add|subtract)\s+/i.test(command)
+    /^(calculate|compute|solve|what is|what's|how much is|multiply|divide|add|subtract)\s+/i.test(
+      command
+    )
   ) {
     const expression = extractExpression(command);
 
@@ -649,9 +942,12 @@ export function parseIntent(text: string): AssistantIntent {
     }
   }
 
-  // 4. Open application
+  // =====================================================
+  // 12. OPEN APPLICATION
+  // =====================================================
+
   const openMatch = command.match(
-    /^(?:open|launch|start|run|go to)\s+(.+)$/i,
+    /^(?:open|launch|start|run|go to)\s+(.+)$/i
   );
 
   if (openMatch?.[1]) {
@@ -665,6 +961,393 @@ export function parseIntent(text: string): AssistantIntent {
     }
   }
 
+  // =====================================================
+  // 13. DEFAULT: PLAY MUSIC
+  // =====================================================
+
+  const playMusicMatch = command.match(
+    /^(?:play|listen\s+to|put\s+on)\s+(.+)$/i
+  );
+
+  if (playMusicMatch?.[1]) {
+    return {
+      type: "play_youtube_music",
+      query: playMusicMatch[1].trim(),
+    };
+  }
+
   return { type: "unknown" };
 }
+
+// export function parseIntent(text: string): AssistantIntent {
+//   const normalized = normalizeText(text);
+//   const command = removePolitePrefix(normalized);
+
+//   if (!command) {
+//     return { type: "unknown" };
+//   }
+// console.log({
+//   normalized,
+//   command
+// });
+
+//   // 1. Web search (check before app detection)
+//   const searchMatch = command.match(
+//     /^(?:search(?:\s+for)?|google|look\s+up|find\s+information\s+about)\s+(.+)$/i,
+//   );
+
+//   if (searchMatch?.[1]) {
+//     return {
+//       type: "web_search",
+//       query: searchMatch[1].trim(),
+//     };
+//   }
+
+
+//   // // const confirmationMatch = /^(?:yes|yeah|yep|confirm|confirm call|proceed)\s+/i.test(command);//check at first
+//   // const confirmationMatch =
+//   //   /\b(?:yes|yeah|yep|yea|confirm|proceed)\b/i.test(command);
+
+//   // const rejectCallMatch =
+//   //   /\b(?:no|nope|cancel|reject|stop calling|cancel call|don't call|do not call)\b/i.test(command);
+
+//   // const dialMatch = command.match(
+//   //   /(?:call|phone|dial|ring)\s+(\+?[\d\s()-]+)/i,
+//   // );
+
+//   // if (dialMatch?.[1]) {
+//   //   const phoneNumber = dialMatch[1].trim();
+
+//   //   if (/\d{5,}/.test(phoneNumber)) {
+//   //     return {
+//   //       type: rejectCallMatch
+//   //         ? "reject_call"
+//   //         : confirmationMatch
+//   //           ? "confirm_call"
+//   //           : "call",
+//   //       phoneNumber,
+//   //     };
+//   //   }
+//   // }
+//   // // Find contact
+//   // const findContactMatch = command.match(
+//   //   /^(?:find|search|look\s+for|get|show)\s+(?:the\s+)?(?:contact|contacts|phone\s+number|number)\s+(?:of\s+)?(.+)$/i,
+//   // );
+
+//   // if (findContactMatch?.[1]) {
+//   //   return {
+//   //     type: "find_contact",
+//   //     phoneNumber: findContactMatch[1].trim(),
+//   //   };
+//   // }
+
+//     // 2. Confirmation / rejection
+//   const confirmationMatch =
+//     /\b(?:yes|yeah|yep|yea|confirm|proceed)\b/i.test(command);
+
+//   const rejectCallMatch =
+//     /\b(?:no|nope|cancel|reject|stop calling|cancel call|don't call|do not call)\b/i.test(command);
+
+//   // 3. Find contact by name or phone number
+//   const findContactMatch = command.match(
+//     /^(?:find|search(?:\s+for)?|look\s+for|look\s+up|get|show|who\s+is|what\s+is|what's|tell\s+me)\s+(?:(?:the\s+)?contact\s+(?:named\s+)?|(?:the\s+)?(?:phone\s+)?number\s+(?:of|for)\s+|)(.+?)(?:'s)?(?:\s+(?:contact|phone\s+number|number))?$/i
+//   );
+
+//   if (findContactMatch?.[1]) {
+//     const contactQuery = findContactMatch[1]
+//       .trim()
+//       .replace(/[?.!,]+$/, "")
+//       .trim();
+
+//     if (contactQuery) {
+//       return {
+//         type: "find_contact",
+//         phoneNumber: contactQuery,
+//       };
+//     }
+//   }
+
+//   // 4. Call by phone number
+//   const dialMatch = command.match(
+//     /^(?:please\s+)?(?:call|phone|dial|ring)\s+(\+?[\d\s()-]+)$/i
+//   );
+
+//   // Select contact from previous assistant response
+// if (
+//     /matching contacts:/i.test(command)
+// ) {
+//     const selectionMatch = command.match(
+//         /^(?:(?:number|option|contact)\s*)?(\d{1,2})(?:st|nd|rd|th)?$|^(?:number|option|contact)\s+(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)$/i
+//     );
+
+//     const numberWords: Record<string, number> = {
+//         first: 1,
+//         second: 2,
+//         third: 3,
+//         fourth: 4,
+//         fifth: 5,
+//         sixth: 6,
+//         seventh: 7,
+//         eighth: 8,
+//         ninth: 9,
+//         tenth: 10,
+//     };
+
+//     if (selectionMatch) {
+//         const index =
+//             Number(selectionMatch[1]) ||
+//             numberWords[selectionMatch[2]?.toLowerCase()];
+
+//         const contactLines = command.match(
+//             /^\d+\.\s+.+$/gm
+//         ) || [];
+//         let n = extractPhoneNumbers(command)?.[index]
+// console.log({n});
+
+//         if (index >= 1 && index <= contactLines.length) {
+//             return {
+//                 type: "call",
+//                phoneNumber: n
+//             };
+//         }
+//     }
+// }
+
+//   if (dialMatch?.[1]) {
+//     const phoneNumber = dialMatch[1].trim();
+
+//     if (/\d{5,}/.test(phoneNumber)) {
+//       return {
+//         type: rejectCallMatch
+//           ? "reject_call"
+//           : confirmationMatch
+//             ? "confirm_call"
+//             : "call",
+//         phoneNumber,
+//       };
+//     }
+//   }
+
+//   // 5. Call contact by name
+//   const callContactMatch = command.match(
+//     /^(?:please\s+)?(?:call|phone|dial|ring)\s+(.+)$/i
+//   );
+
+//   if (callContactMatch?.[1]) {
+//     return {
+//       type: "find_contact",
+//       phoneNumber: callContactMatch[1].trim(),
+//     };
+//   }
+
+
+//   const youtubeVideoMatch = command.match(
+//     /^(?:play|watch)\s+(?:a\s+)?(?:(?:youtube)\s+)?video(?:\s+of|\s+about)?\s+(.+)$/i,
+//   );
+
+//   if (youtubeVideoMatch?.[1]) {
+//     return {
+//       type: "play_youtube_video",
+//       query: youtubeVideoMatch[1].trim(),
+//     };
+//   }
+
+//   // Example: watch Believer on YouTube
+//   const watchYoutubeMatch = command.match(
+//     /^(?:watch|play)\s+(.+?)\s+on\s+youtube$/i,
+//   );
+
+//   if (watchYoutubeMatch?.[1]) {
+//     return {
+//       type: "play_youtube_video",
+//       query: watchYoutubeMatch[1].trim(),
+//     };
+//   }
+
+//   // 4. YouTube Music
+//   const youtubeMusicMatch = command.match(
+//     /^(?:play|listen\s+to|put\s+on)\s+(?:(?:youtube\s+)?music|song)\s+(?:for\s+)?(.+)$/i,
+//   );
+
+//   if (youtubeMusicMatch?.[1]) {
+//     return {
+//       type: "play_youtube_music",
+//       query: youtubeMusicMatch[1].trim(),
+//     };
+//   }
+
+//   // Example: play Believer on YouTube Music
+//   const musicSuffixMatch = command.match(
+//     /^(?:play|listen\s+to|put\s+on)\s+(.+?)\s+on\s+(?:youtube\s+)?music$/i,
+//   );
+
+//   if (musicSuffixMatch?.[1]) {
+//     return {
+//       type: "play_youtube_music",
+//       query: musicSuffixMatch[1].trim(),
+//     };
+//   }
+
+//   // Default: play <song name> means YouTube Music
+//   const playMusicMatch = command.match(
+//     /^(?:play|listen\s+to|put\s+on)\s+(.+)$/i,
+//   );
+
+//   if (playMusicMatch?.[1]) {
+//     return {
+//       type: "play_youtube_music",
+//       query: playMusicMatch[1].trim(),
+//     };
+//   }
+
+//   // 3. Calculator
+//   if (
+//     // /^(calculate|compute|solve|what is|what's|how much is)\s+/i.test(command)
+//     /^(calculate|compute|solve|what is|what's|how much is|multiply|divide|add|subtract)\s+/i.test(command)
+//   ) {
+//     const expression = extractExpression(command);
+
+//     if (expression) {
+//       return {
+//         type: "calculate",
+//         expression,
+//       };
+//     }
+//   }
+
+//   // 4. Open application
+//   const openMatch = command.match(
+//     /^(?:open|launch|start|run|go to)\s+(.+)$/i,
+//   );
+
+//   if (openMatch?.[1]) {
+//     const app = detectApp(openMatch[1].trim());
+
+//     if (app) {
+//       return {
+//         type: "open_app",
+//         app,
+//       };
+//     }
+//   }
+
+//   return { type: "unknown" };
+// }
+
+export async function handleAssistantMessage(
+  text: string,
+  // confirmation: boolean
+): Promise<
+  {
+    response: string;
+    confirmation?: string
+  }> {
+  let intent = parseIntent(text);
+  let UNKNOWN_INTENT: string = DEAFAULT_UNKNOWN;
+
+  // Use Qwen3 only when the rule-based parser cannot understand.
+  if (intent.type === "unknown") {
+    console.log('🤖 Using AI');
+    try {
+      console.log("[Assistant] Trying AI intent recognition...");
+      intent = await parseIntentWithAI(text);
+      console.log("[Assistant] AI intent:", intent);
+      UNKNOWN_INTENT = AI_UNKNOWN;
+
+    } catch (error) {
+      console.error("[Assistant] AI recognition failed:", error);
+
+      return {
+        response: "I couldn't understand that request. Please try again.",
+        // confirmation: false,
+      }
+    }
+  }
+
+  switch (intent.type) {
+    case "open_app":
+      return {
+        response: (await openApp(intent.app)).message,
+        // confirmation: false,
+      }
+
+    case "web_search":
+      return {
+        response: (await searchWeb(intent.query)).message,
+        // confirmation: false,
+      }
+
+    case "play_youtube_music":
+      return {
+        response: (await playYoutubeMusic(intent.query)).message,
+        // confirmation: false,
+      }
+
+
+    case "play_youtube_video": {
+      return {
+        response: (await playYoutube(intent.query)).message,
+        // confirmation: false,
+      }
+    }
+
+    case "calculate":
+      return {
+        response: calculate(intent.expression).message,
+        // confirmation: false,
+      }
+
+    case "call":
+      return {
+        response: (await callNumber(intent.phoneNumber)).message,
+        confirmation: 'call confirmation:',
+      }
+      //     case "find_contact":
+      // return {
+      //   response: (await findContact(intent.phoneNumber)).message,
+      //   confirmation: 'find_contact selection:',
+      // }
+      case "find_contact": {
+  const result = await findContact(intent.phoneNumber);
+
+  const hasSelectableContacts =
+    result.success &&
+    (
+      /Contact index:\s*\d+/i.test(result.message) ||
+      /I found\s+[1-9]\d*\s+matching contacts:/i.test(result.message)
+    );
+
+  return {
+    response: result.message,
+    confirmation: hasSelectableContacts
+      ? "find_contact confirmation:"
+      : undefined,
+  };
+}
+    case "confirm_call":
+      return {
+        response: (await callNumberConfirm(intent.phoneNumber)).message,
+        // confirmation: false,
+      }
+    case "reject_call":
+      return {
+        response: (await callNumberReject(intent.phoneNumber)).message,
+        // confirmation: false,
+      }
+
+    case "whatsapp":
+      return {
+        response: "WhatsApp actions aren't implemented yet.",
+        // confirmation: false,
+      }
+
+    case "unknown":
+    default: return {
+      response: UNKNOWN_INTENT,
+      // confirmation: false,
+    }
+
+  }
+}
+
 

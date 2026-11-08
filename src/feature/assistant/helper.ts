@@ -1,4 +1,5 @@
 import { Linking, Platform } from "react-native";
+import * as Contacts from "expo-contacts/legacy";
 
 type YouTubeVideo = {
     videoId: string;
@@ -230,5 +231,93 @@ export async function playMusic(cleanQuery: string): ActionResponse {
     return {
         success: false,
         message: `Couldn't find or open ${cleanQuery}.`
+    }
+}
+
+
+export type ContactMatch = {
+    id: string;
+    name: string;
+    phoneNumbers: string[];
+};
+
+export async function findContact(
+    query: string,
+): ActionResponse {
+    if (!query?.trim()) {
+        return {
+            success: false,
+            message: "Please tell me the contact name.",
+        };
+    }
+
+    try {
+        // 1. Request permission
+        const { status } = await Contacts.requestPermissionsAsync();
+
+        if (status !== "granted") {
+            return {
+                success: false,
+                message: "I need permission to access your contacts.",
+            };
+        }
+
+        // 2. Search contacts by name
+        const response = await Contacts.getContactsAsync({
+            name: query.trim(),
+            fields: [
+                Contacts.Fields.Name,
+                Contacts.Fields.PhoneNumbers,
+            ],
+            pageSize: 50,
+            pageOffset: 0,
+            sort: Contacts.SortTypes.FirstName,
+        });
+
+        // 3. Extract matching contacts
+        const matches: ContactMatch[] = response.data
+            .filter(contact => contact.phoneNumbers?.length)
+            .map(contact => ({
+                id: contact.id,
+                name: contact.name || "Unknown",
+                phoneNumbers: [
+                    ...new Set(
+                        contact.phoneNumbers!
+                            .map(phone => phone.number?.trim().replaceAll(" ",''))
+                            .filter((number): number is string => !!number),
+                    ),
+                ],
+            }))
+            .filter(contact => contact.phoneNumbers.length > 0);
+console.log({matches});
+
+if (matches.length === 1) {
+    const contact = matches[0];
+
+    return {
+        success: true,
+        message: `Found ${contact.name}. Phone number: ${contact.phoneNumbers.join(", ")}. Contact index: 1.`,
+    };
+}
+
+const contactList = matches
+    .map((contact, index) =>
+        `${index + 1}. ${contact.name}, phone: ${contact.phoneNumbers.join(", ")}`
+    )
+    .join("\n");
+
+return {
+    success: true,
+    message: `I found ${matches.length} matching contacts:
+    \n${contactList}
+    \n Do select a contact by number from 1 to ${matches.length}.`,
+};
+    } catch (error) {
+        console.error("Find contact error:", error);
+
+        return {
+            success: false,
+            message: "Something went wrong while searching contacts.",
+        };
     }
 }

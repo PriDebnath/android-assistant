@@ -80,21 +80,25 @@ export default function HomeScreen() {
 
     try {
       console.log({confirmationInput});
-      const {response, needsConfirmation} =
-        await handleAssistantMessage(confirmationInput+text);
-      Speech.speak(response, {
-        language: "en-IN",
-        pitch: 1,
-        rate: 0.9,
-      });
-      if (needsConfirmation) {
-                setConfirmationInput("\n " + " " + text+ "\n " + " " )
-      }else{
-        setConfirmationInput('')
-      }
-console.log({needsConfirmation});
-console.log('needsConfirmation'+needsConfirmation);
+      const { response, confirmation } = await handleAssistantMessage(
+  `${confirmationInput}${text}`
+);
 
+Speech.speak(response, {
+  language: "en-IN",
+  pitch: 1,
+  rate: 0.9,
+});
+
+if (confirmation) {
+  setConfirmationInput(
+    `${confirmation}\n${response}\nUser reply: `
+  );
+} else {
+  setConfirmationInput("");
+}
+ 
+console.log({confirmation});
 
       const assistantMessage: ChatMessage = {
         id: `${Date.now()}-assistant`,

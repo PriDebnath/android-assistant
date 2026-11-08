@@ -25,6 +25,10 @@ export type AssistantIntent =
     type: "call";
     phoneNumber: string;
   }
+    | {
+    type: "find_contact";
+    phoneNumber: string;
+  }
   | {
     type: 'confirm_call'
     phoneNumber: string;
