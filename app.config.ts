@@ -22,7 +22,7 @@ export default ({ }) => ({
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.pri.cropped.assistant",
+      "package": "com.pri.assistant",
       "permissions": [
         "CALL_PHONE"
       ]
