@@ -33,14 +33,6 @@ export default ({ }) => ({
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
-        }
-      ],
       "expo-web-browser",
       "expo-speech-recognition",
       [
@@ -81,11 +73,11 @@ export default ({ }) => ({
           "widgets": [
             {
               "name": "MyWidget",
-              "displayName": "My Widget",
+              "displayName": "Pri",
               "description": "A sample home screen widget",
               "android": {
-                "targetCellWidth": 2,
-                "targetCellHeight": 2,
+                "targetCellWidth": 1,
+                "targetCellHeight": 1,
                 "initialLayout": "./src/widgets/my-widgets.tsx"
               }
             }

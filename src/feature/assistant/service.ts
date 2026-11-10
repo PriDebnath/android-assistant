@@ -1,7 +1,7 @@
 import { AssistantIntent, SupportedApp } from "@/feature/assistant/types";
 import { Linking, Platform } from "react-native";
 import { parseIntentWithAI } from "./ai/service/ai-intent.service";
-import { calculate, callNumber, callNumberConfirm, callNumberReject, findContact, playYoutube, playYoutubeMusic, searchWeb } from "./helper";
+import { calculate, callNumber, callNumberConfirm, callNumberReject, findContact, getContactPhoneNumber, getFirstPhoneNumber, normalizeText, parseContactSelectionIndex, playYoutube, playYoutubeMusic, removePolitePrefix, searchWeb } from "./helper";
 
 export const appAliases: Record<string, SupportedApp> = {
   // YouTube
@@ -238,22 +238,7 @@ const appNames = Object.keys(appAliases).sort(
   (a, b) => b.length - a.length,
 );
 
-// Normalize text
-function normalizeText(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[?!,]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
-// Remove polite introductory phrases
-function removePolitePrefix(text: string): string {
-  return text.replace(
-    /^(please\s+|can you\s+|could you\s+|would you\s+|hey\s+assistant\s+|assistant\s+|hey\s+)+/i,
-    "",
-  ).trim();
-}
 
 // Find supported application
 function detectApp(text: string): SupportedApp | null {
@@ -351,166 +336,7 @@ function extractExpression(text: string): string | null {
   return expression.trim();
 }
 
-export function extractPhoneNumbers(text: string): string[] {
-    const matches = text.match(
-        /(?:\+?\d[\d\s()-]{5,}\d)/g
-    ) || [];
 
-    return [
-        ...new Set(
-            matches.map(number =>
-                number.replace(/[\s()-]/g, "").trim()
-            )
-        ),
-    ];
-}
-
-function parseContactSelectionIndex(reply: string): number | undefined {
-  const value = reply
-    .trim()
-    .toLowerCase()
-    .replace(/[.!?,]/g, "")
-    .replace(/\s+/g, " ");
-
-  const numericMatch = value.match(
-    /^(?:(?:select|choose|call|dial)\s+)?(?:(?:the\s+)?(?:number|option|contact)\s+)?(\d{1,2})(?:st|nd|rd|th)?(?:\s+(?:one|contact))?$/i
-  );
-
-  if (numericMatch?.[1]) {
-    return Number(numericMatch[1]);
-  }
-
-  const numberWords: Record<string, number> = {
-    first: 1,
-    one: 1,
-    second: 2,
-    two: 2,
-    third: 3,
-    three: 3,
-    fourth: 4,
-    four: 4,
-    fifth: 5,
-    five: 5,
-    sixth: 6,
-    six: 6,
-    seventh: 7,
-    seven: 7,
-    eighth: 8,
-    eight: 8,
-    ninth: 9,
-    nine: 9,
-    tenth: 10,
-    ten: 10,
-  };
-
-  const wordMatch = value.match(
-    /^(?:(?:select|choose|call|dial)\s+)?(?:the\s+)?(first|one|second|two|third|three|fourth|four|fifth|five|sixth|six|seventh|seven|eighth|eight|ninth|nine|tenth|ten)(?:\s+(?:one|contact))?$/i
-  );
-
-  if (wordMatch?.[1]) {
-    return numberWords[wordMatch[1]];
-  }
-
-  return undefined;
-}
-
-// function getFirstPhoneNumber(value: string): string | undefined {
-//   const numbers = extractPhoneNumbers(value);
-
-//   if (numbers?.length) {
-//     return numbers[0];
-//   }
-
-//   return value.match(/\+?\d[\d\s()-]{4,}\d/)?.[0]?.trim();
-// }
-
-function getFirstPhoneNumber(value: string): string | undefined {
-  const match = value.match(/\+?\d[\d\s()-]*\d|\d/);
-
-  return match?.[0]?.replace(/[^\d+]/g, "");
-}
-
-// function getContactPhoneNumber(
-//   contactContext: string,
-//   contactIndex: number
-// ): string | undefined {
-
-//   // Multiple contacts:
-//   // 1. John, phone: 9876543210
-//   // 2. Alex, phone: 9123456780
-
-//   const numberedLine = contactContext.match(
-//     new RegExp(
-//       `^[\\t ]*${contactIndex}\\.[\\t ]*.*?\\bphone:\\s*([^\\r\\n]+)`,
-//       "im"
-//     )
-//   );
-
-//   if (numberedLine?.[1]) {
-//     return getFirstPhoneNumber(numberedLine[1]);
-//   }
-
-//   // Single contact:
-//   // Found John. Phone number: 9876543210. Contact index: 1.
-
-//   const singleContactIndex = contactContext.match(
-//     /Contact index:\s*(\d+)/i
-//   );
-
-//   if (Number(singleContactIndex?.[1]) === contactIndex) {
-//     const phoneMatch = contactContext.match(
-//       /Phone number:\s*([^\r\n]*?)(?:\s*Contact index:\s*\d+\.?)?\s*$/im
-//     );
-
-//     if (phoneMatch?.[1]) {
-//       return getFirstPhoneNumber(phoneMatch[1]);
-//     }
-//   }
-
-//   return undefined;
-// }
-
-function getContactPhoneNumber(
-  contactContext: string,
-  contactIndex: number
-): string | undefined {
-
-  const lines = contactContext.split(/\r?\n/);
-
-  // Find the exact numbered contact line.
-  const selectedLine = lines.find(line =>
-    new RegExp(`^\\s*${contactIndex}\\.\\s*`).test(line)
-  );
-
-  console.log("[Selected Contact Line]", selectedLine);
-
-  if (selectedLine) {
-    const phoneMatch = selectedLine.match(
-      /\bphone:\s*(.+)$/i
-    );
-
-    if (phoneMatch?.[1]) {
-      return getFirstPhoneNumber(phoneMatch[1]);
-    }
-  }
-
-  // Single contact fallback.
-  const singleContactIndex = contactContext.match(
-    /Contact index:\s*(\d+)/i
-  );
-
-  if (Number(singleContactIndex?.[1]) === contactIndex) {
-    const phoneMatch = contactContext.match(
-      /Phone number:\s*(.+?)(?=\s*Contact index:|$)/i
-    );
-
-    if (phoneMatch?.[1]) {
-      return getFirstPhoneNumber(phoneMatch[1]);
-    }
-  }
-
-  return undefined;
-}
 
 export function parseIntent(text: string): AssistantIntent {
   const rawText = text.trim();
