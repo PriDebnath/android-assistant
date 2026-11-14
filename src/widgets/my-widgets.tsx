@@ -1,17 +1,25 @@
 
 import { createWidget } from 'expo-widgets';
-import { size } from '@expo/ui/jetpack-compose/modifiers';
-import {Column,  Image,} from '@expo/ui/jetpack-compose';
+import { Column, Image } from '@expo/ui/jetpack-compose';
+
+import {
+  fillMaxSize,
+  cornerRadius,
+} from '@expo/ui/jetpack-compose/modifiers';
 
 const MyWidget = () => {
   'widget';
+
   return (
-    <Column>
+    <Column modifiers={[fillMaxSize()]}>
       <Image
         source={{ uri: 'pri' }}
         contentDescription="Pri"
-        contentScale="fit"
-        modifiers={[size(80, 80)]}
+        contentScale="crop"
+        modifiers={[
+          fillMaxSize(),
+          cornerRadius(20),
+        ]}
       />
     </Column>
   );

@@ -107,8 +107,15 @@ export default ({ }) => ({
           // },
           // "imageWidth": 200
         }
-      ]
-      
+      ],
+      [
+  "expo-camera",
+  {
+    cameraPermission:
+      "Allow Pri Assistant to access the camera for flashlight control.",
+    recordAudioAndroid: false,
+  },
+],
     ],
     "experiments": {
       "typedRoutes": true,

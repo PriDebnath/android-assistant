@@ -80,13 +80,20 @@ export type AssistantIntent =
     durationSeconds: number;
   } | {
     type: 'unmute_volume'
-  }| {
+  } | {
     type: 'mute_volume'
   } | {
     type: 'increase_volume'
   } | {
     type: 'decrease_volume'
-  } | {
+  } | { type: "turn_on_flashlight" }
+  | { type: "turn_off_flashlight" }
+  | 
+ { type: "pause_media" }
+| { type: "resume_media" }
+| { type: "next_track" }
+| { type: "previous_track" }
+|{
     type: "unknown";
   };
 

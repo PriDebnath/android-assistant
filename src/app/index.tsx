@@ -25,6 +25,7 @@ import {
 import ModelTest from "@/feature/assistant/ai/component/test-ai-response";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Test from "@/feature/assistant/component/test";
+import FlashlightController from "@/feature/assistant/component/FlashlightController";
 
 export default function HomeScreen() {
   const [messages, setMessages] =
@@ -140,7 +141,8 @@ console.log({confirmation});
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <StatusBar barStyle="dark-content" hidden={false}
-        />
+        />       
+        
 
         <View style={styles.container}>
           <View style={styles.header}>
@@ -156,7 +158,9 @@ console.log({confirmation});
 
             <View style={styles.status}>
               <View style={styles.statusDot} />
-              <Test/>
+              {/* <Test/> */}
+                       <FlashlightController />
+
 <ModelTest/>
               {/* <Text style={styles.statusText}>
                 Local

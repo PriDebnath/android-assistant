@@ -4,6 +4,7 @@ import { parseIntentWithAI } from "./ai/service/ai-intent.service";
 import { calculate, callNumber, callNumberConfirm, callNumberReject, findContact, getContactPhoneNumber, getFirstPhoneNumber, normalizeText, parseContactSelectionIndex, playYoutube, playYoutubeMusic, removePolitePrefix, searchWeb } from "./helper";
 import { getBrightness, setBrightness } from "./service/device-control/brightness";
 import { decreaseVolume, increaseVolume, muteVolume, unmuteVolume } from "./service/device-control/volume";
+import { turnOffFlashlight, turnOnFlashlight } from "./service/device-control/flashlight";
 
 export const appAliases: Record<string, SupportedApp> = {
   // YouTube
@@ -351,67 +352,67 @@ export function parseIntent(text: string): AssistantIntent {
   // 1. CONTACT SELECTION FROM PREVIOUS RESPONSE
   // =====================================================
 
-const findContactContext = rawText.match(
-  /find_contact confirmation:\s*([\s\S]*?)\n\s*User reply:\s*([\s\S]*)$/i
-);
-
-if (findContactContext) {
- const findContactContext = rawText.match(
-  /find_contact confirmation:\s*([\s\S]*?)\n\s*User reply:\s*([\s\S]*)$/i
-);
-
-if (findContactContext) {
-  const previousResponse = findContactContext[1];
-  const userReply = findContactContext[2].trim();
-
-  // Explicit call command takes priority over contact selection.
-  const directDialMatch = userReply.match(
-    /^(?:please\s+)?(?:call|phone|dial|ring)\s+(.+)$/i
+  const findContactContext = rawText.match(
+    /find_contact confirmation:\s*([\s\S]*?)\n\s*User reply:\s*([\s\S]*)$/i
   );
 
-  if (directDialMatch?.[1]) {
-    const target = directDialMatch[1]
-      .trim()
-      .replace(/[.!?,]+$/, "");
+  if (findContactContext) {
+    const findContactContext = rawText.match(
+      /find_contact confirmation:\s*([\s\S]*?)\n\s*User reply:\s*([\s\S]*)$/i
+    );
 
-    const isPhoneNumber = /^[+\d\s()-]+$/.test(target);
-    const digitCount = target.replace(/\D/g, "").length;
+    if (findContactContext) {
+      const previousResponse = findContactContext[1];
+      const userReply = findContactContext[2].trim();
 
-    if (isPhoneNumber && digitCount >= 3) {
-      return {
-        type: "call",
-        phoneNumber: target.replace(/[^\d+]/g, ""),
-      };
+      // Explicit call command takes priority over contact selection.
+      const directDialMatch = userReply.match(
+        /^(?:please\s+)?(?:call|phone|dial|ring)\s+(.+)$/i
+      );
+
+      if (directDialMatch?.[1]) {
+        const target = directDialMatch[1]
+          .trim()
+          .replace(/[.!?,]+$/, "");
+
+        const isPhoneNumber = /^[+\d\s()-]+$/.test(target);
+        const digitCount = target.replace(/\D/g, "").length;
+
+        if (isPhoneNumber && digitCount >= 3) {
+          return {
+            type: "call",
+            phoneNumber: target.replace(/[^\d+]/g, ""),
+          };
+        }
+      }
+
+      // Otherwise, select a contact by index.
+      const contactIndex = parseContactSelectionIndex(userReply);
+
+      if (!contactIndex || contactIndex < 1) {
+        return { type: "unknown" };
+      }
+
+      const phoneNumber = getContactPhoneNumber(
+        previousResponse,
+        contactIndex
+      );
+
+      console.log("[Contact Selection]", {
+        contactIndex,
+        phoneNumber,
+      });
+
+      if (phoneNumber) {
+        return {
+          type: "call",
+          phoneNumber,
+        };
+      }
+
+      return { type: "unknown" };
     }
   }
-
-  // Otherwise, select a contact by index.
-  const contactIndex = parseContactSelectionIndex(userReply);
-
-  if (!contactIndex || contactIndex < 1) {
-    return { type: "unknown" };
-  }
-
-  const phoneNumber = getContactPhoneNumber(
-    previousResponse,
-    contactIndex
-  );
-
-  console.log("[Contact Selection]", {
-    contactIndex,
-    phoneNumber,
-  });
-
-  if (phoneNumber) {
-    return {
-      type: "call",
-      phoneNumber,
-    };
-  }
-
-  return { type: "unknown" };
-}
-}
   // =====================================================
   // 2. CALL CONFIRMATION / REJECTION
   // =====================================================
@@ -480,15 +481,15 @@ if (findContactContext) {
     command,
   });
 
- const batteryInfoMatch = command.match(
-  /^(?:(?:what(?:'s| is)|tell me|check|show|get|read|how much)\s+)?(?:(?:my|the|phone's)\s+)?(?:battery|battery level|battery percentage|battery status|charging status|charging state)(?:\s+(?:level|percentage|status|information|info|left|remaining))?[?.!]*$/i
-);
+  const batteryInfoMatch = command.match(
+    /^(?:(?:what(?:'s| is)|tell me|check|show|get|read|how much)\s+)?(?:(?:my|the|phone's)\s+)?(?:battery|battery level|battery percentage|battery status|charging status|charging state)(?:\s+(?:level|percentage|status|information|info|left|remaining))?[?.!]*$/i
+  );
 
-if (batteryInfoMatch) {
-  return {
-    type: "battery_info",
-  };
-}
+  if (batteryInfoMatch) {
+    return {
+      type: "battery_info",
+    };
+  }
   const explicitContactMatch = command.match(
     /^(?:find|search(?:\s+for)?|look\s+for|look\s+up|get|show(?:\s+me)?|google)\s+(?:(?:the\s+)?contact(?:\s+(?:named|called))?\s+|(?:the\s+)?(?:phone\s+)?number\s+(?:of|for)\s+)(.+)$/i
   );
@@ -502,7 +503,76 @@ if (batteryInfoMatch) {
     };
   }
 
-  
+
+  // =====================================================
+  // MEDIA PLAYBACK CONTROL
+  // =====================================================
+
+  // PAUSE MEDIA
+  // Examples:
+  // Pause.
+  // Pause music.
+  // Pause playback.
+  // Stop the music.
+  // Pause the current song.
+
+  const pauseMediaMatch = command.match(
+    /^(?:pause|stop)\s*(?:(?:the|my|current)\s+)?(?:(?:media|music|song|audio|playback|track))?[?.!]*$/i
+  );
+
+  if (pauseMediaMatch) {
+    return { type: "pause_media" };
+  }
+
+  // RESUME MEDIA
+  // Examples:
+  // Resume.
+  // Resume music.
+  // Continue playing.
+  // Resume playback.
+  // Start playing again.
+  // Play again.
+
+  const resumeMediaMatch = command.match(
+    /^(?:resume(?:\s+(?:(?:the|my|current)\s+)?(?:media|music|song|audio|playback|track))?|continue(?:\s+(?:playing|playback|music))?|start\s+(?:playing|playback)\s+again|play\s+again)[?.!]*$/i
+  );
+
+  if (resumeMediaMatch) {
+    return { type: "resume_media" };
+  }
+
+  // NEXT TRACK
+  // Examples:
+  // Next.
+  // Next song.
+  // Next track.
+  // Skip this song.
+  // Play the next song.
+
+  const nextTrackMatch = command.match(
+    /^(?:next(?:\s+(?:song|track|music))?|skip(?:\s+(?:this|the|current)\s+(?:song|track))?|play\s+next(?:\s+(?:song|track))?)[?.!]*$/i
+  );
+
+  if (nextTrackMatch) {
+    return { type: "next_track" };
+  }
+
+  // PREVIOUS TRACK
+  // Examples:
+  // Previous.
+  // Previous song.
+  // Previous track.
+  // Go back.
+  // Play previous song.
+
+  const previousTrackMatch = command.match(
+    /^(?:previous(?:\s+(?:song|track|music))?|(?:go|move)\s+back(?:\s+(?:a\s+)?(?:song|track))?|play\s+previous(?:\s+(?:song|track))?)[?.!]*$/i
+  );
+
+  if (previousTrackMatch) {
+    return { type: "previous_track" };
+  }
+
 
   // Examples:
   // What's John's number?
@@ -521,41 +591,41 @@ if (batteryInfoMatch) {
   }
 
 
-// GET CURRENT BRIGHTNESS
-const brightnessInfoMatch = command.match(
-  /^(?:what(?:'s| is)|tell me|check|show|get|read)\s+(?:my\s+)?(?:screen\s+)?brightness(?:\s+level)?[?.!]*$/i
-);
+  // GET CURRENT BRIGHTNESS
+  const brightnessInfoMatch = command.match(
+    /^(?:what(?:'s| is)|tell me|check|show|get|read)\s+(?:my\s+)?(?:screen\s+)?brightness(?:\s+level)?[?.!]*$/i
+  );
 
-if (brightnessInfoMatch) {
-  return {
-    type: "brightness_info",
-  };
-}
-const volumeInfoMatch = command.match(
-  /^(?:(?:what(?:'s| is)|tell me|check|show|get|read)\s+)?(?:(?:my|the|phone's)\s+)?(?:volume|media volume|sound volume)(?:\s+(?:level|percentage|status))?[?.!]*$/i
-);
+  if (brightnessInfoMatch) {
+    return {
+      type: "brightness_info",
+    };
+  }
+  const volumeInfoMatch = command.match(
+    /^(?:(?:what(?:'s| is)|tell me|check|show|get|read)\s+)?(?:(?:my|the|phone's)\s+)?(?:volume|media volume|sound volume)(?:\s+(?:level|percentage|status))?[?.!]*$/i
+  );
 
-if (volumeInfoMatch) {
-  return { type: "volume_info" };
-}
+  if (volumeInfoMatch) {
+    return { type: "volume_info" };
+  }
 
 
-// const volumeMatch = command.match(
-//   /^(?:(?:set|change|adjust|make|turn)\s+)?(?:(?:my|the)\s+)?(?:media\s+)?volume\s+(?:(?:to|at|level)\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
-// );
+  // const volumeMatch = command.match(
+  //   /^(?:(?:set|change|adjust|make|turn)\s+)?(?:(?:my|the)\s+)?(?:media\s+)?volume\s+(?:(?:to|at|level)\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
+  // );
 
-// if (volumeMatch?.[1]) {
-//   const percentage = Number(volumeMatch[1]);
+  // if (volumeMatch?.[1]) {
+  //   const percentage = Number(volumeMatch[1]);
 
-//   if (percentage >= 0 && percentage <= 100) {
-//     return {
-//       type: "set_volume",
-//       percentage,
-//     };
-//   }
+  //   if (percentage >= 0 && percentage <= 100) {
+  //     return {
+  //       type: "set_volume",
+  //       percentage,
+  //     };
+  //   }
 
-//   return { type: "unknown" };
-// }
+  //   return { type: "unknown" };
+  // }
 
 
   // =====================================================
@@ -661,27 +731,63 @@ if (volumeInfoMatch) {
   }
 
 
-// SET BRIGHTNESS
-// const brightnessMatch = command.match(
-//   /^(?:set|change|adjust|make)\s+(?:my\s+)?(?:screen\s+)?brightness\s+(?:to\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
-// );
-const brightnessMatch = command.match(
-  /^(?:(?:please|can you|could you)\s+)?(?:(?:set|change|adjust|make|turn)\s+)?(?:my\s+)?(?:(?:screen|display)\s+)?brightness\s+(?:(?:to|at|level)\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
-);
-if (brightnessMatch?.[1]) {
-  const percentage = Number(brightnessMatch[1]);
+  // =====================================================
+  // FLASHLIGHT CONTROL
+  // =====================================================
 
-  if (percentage >= 1 && percentage <= 100) {
-    return {
-      type: "set_brightness",
-      percentage,
-    };
+  // TURN ON FLASHLIGHT
+  // Examples:
+  // Turn on flashlight.
+  // Switch on torch.
+  // Enable my phone flashlight.
+  // Activate the torch.
+  // I need some light.
+
+  const turnOnFlashlightMatch = command.match(
+    /^(?:(?:turn|switch)\s+on|enable|activate|start)\s+(?:(?:my|the|phone's)\s+)?(?:phone\s+)?(?:flashlight|torch)(?:\s+light)?[?.!]*$|^(?:flashlight|torch)\s+on[?.!]*$|^(?:i\s+need|give\s+me)\s+(?:some\s+)?light[?.!]*$/i
+  );
+
+  if (turnOnFlashlightMatch) {
+    return { type: "turn_on_flashlight" };
   }
 
-  return {
-    type: "unknown",
-  };
-}
+  // TURN OFF FLASHLIGHT
+  // Examples:
+  // Turn off flashlight.
+  // Switch off torch.
+  // Disable the flashlight.
+  // Deactivate torch.
+  // Flashlight off.
+
+  const turnOffFlashlightMatch = command.match(
+    /^(?:(?:turn|switch)\s+off|disable|deactivate|stop)\s+(?:(?:my|the|phone's)\s+)?(?:phone\s+)?(?:flashlight|torch)(?:\s+light)?[?.!]*$|^(?:flashlight|torch)\s+off[?.!]*$/i
+  );
+
+  if (turnOffFlashlightMatch) {
+    return { type: "turn_off_flashlight" };
+  }
+
+  // SET BRIGHTNESS
+  // const brightnessMatch = command.match(
+  //   /^(?:set|change|adjust|make)\s+(?:my\s+)?(?:screen\s+)?brightness\s+(?:to\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
+  // );
+  const brightnessMatch = command.match(
+    /^(?:(?:please|can you|could you)\s+)?(?:(?:set|change|adjust|make|turn)\s+)?(?:my\s+)?(?:(?:screen|display)\s+)?brightness\s+(?:(?:to|at|level)\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
+  );
+  if (brightnessMatch?.[1]) {
+    const percentage = Number(brightnessMatch[1]);
+
+    if (percentage >= 1 && percentage <= 100) {
+      return {
+        type: "set_brightness",
+        percentage,
+      };
+    }
+
+    return {
+      type: "unknown",
+    };
+  }
 
   // =====================================================
   // 5. WEB SEARCH
@@ -699,34 +805,34 @@ if (brightnessMatch?.[1]) {
   }
 
   // =====================================================
-// 6. CALL: NUMBER OR CONTACT NAME
-// =====================================================
+  // 6. CALL: NUMBER OR CONTACT NAME
+  // =====================================================
 
-const callMatch = command.match(
-  /^(?:please\s+)?(?:call|phone|dial|ring)\s+(.+)$/i
-);
+  const callMatch = command.match(
+    /^(?:please\s+)?(?:call|phone|dial|ring)\s+(.+)$/i
+  );
 
-if (callMatch?.[1]) {
-  const target = callMatch[1]
-    .trim()
-    .replace(/[.!?,]+$/, "");
+  if (callMatch?.[1]) {
+    const target = callMatch[1]
+      .trim()
+      .replace(/[.!?,]+$/, "");
 
-  const isPhoneNumber = /^[+\d\s()-]+$/.test(target);
-  const digitCount = target.replace(/\D/g, "").length;
+    const isPhoneNumber = /^[+\d\s()-]+$/.test(target);
+    const digitCount = target.replace(/\D/g, "").length;
 
-  if (isPhoneNumber && digitCount >= 3) {
+    if (isPhoneNumber && digitCount >= 3) {
+      return {
+        type: "call",
+        phoneNumber: target.replace(/[^\d+]/g, ""),
+      };
+    }
+
+    // It's a contact name, not a phone number.
     return {
-      type: "call",
-      phoneNumber: target.replace(/[^\d+]/g, ""),
+      type: "find_contact",
+      phoneNumber: target,
     };
   }
-
-  // It's a contact name, not a phone number.
-  return {
-    type: "find_contact",
-    phoneNumber: target,
-  };
-}
 
   // =====================================================
   // 6. CALL DIRECT PHONE NUMBER
@@ -1205,49 +1311,63 @@ export async function handleAssistantMessage(
         // confirmation: false,
       }
     }
-case "set_brightness": {
-  const result = await setBrightness(intent.percentage);
+    case "set_brightness": {
+      const result = await setBrightness(intent.percentage);
 
-  return {
-    response: "result.message",
-  };
-}
+      return {
+        response: "result.message",
+      };
+    }
 
-case "unmute_volume": {
-  const result = await unmuteVolume();
-  return {
-    response: result.message,
-  };
-}
+    case "unmute_volume": {
+      const result = await unmuteVolume();
+      return {
+        response: result.message,
+      };
+    }
 
-case "increase_volume": {
-  const result = await increaseVolume();
-  return {
-    response: result.message,
-  };
-}
-case "decrease_volume": {
-  const result = await decreaseVolume();
-  return {
-    response: result.message,
-  };
-}
+    case "increase_volume": {
+      const result = await increaseVolume();
+      return {
+        response: result.message,
+      };
+    }
+    case "decrease_volume": {
+      const result = await decreaseVolume();
+      return {
+        response: result.message,
+      };
+    }
+    case "turn_on_flashlight": {
+      const result = await turnOnFlashlight();
+      return {
+        response: result.message
+      }
+    }
 
 
-case "mute_volume": {
-  const result = await muteVolume();
-  return {
-    response: result.message,
-  };
-}
+    case "turn_off_flashlight": {
+      const result = await turnOffFlashlight();
+      return {
+        response: result.message
+      }
+    }
 
-case "brightness_info": {
-  const result = await getBrightness();
 
-  return {
-    response: result.message,
-  };
-}
+    case "mute_volume": {
+      const result = await muteVolume();
+      return {
+        response: result.message,
+      };
+    }
+
+    case "brightness_info": {
+      const result = await getBrightness();
+
+      return {
+        response: result.message,
+      };
+    }
     case "calculate":
       return {
         response: calculate(intent.expression).message,
@@ -1259,28 +1379,28 @@ case "brightness_info": {
         response: (await callNumber(intent.phoneNumber)).message,
         confirmation: 'call confirmation:',
       }
-      //     case "find_contact":
-      // return {
-      //   response: (await findContact(intent.phoneNumber)).message,
-      //   confirmation: 'find_contact selection:',
-      // }
-      case "find_contact": {
-  const result = await findContact(intent.phoneNumber);
+    //     case "find_contact":
+    // return {
+    //   response: (await findContact(intent.phoneNumber)).message,
+    //   confirmation: 'find_contact selection:',
+    // }
+    case "find_contact": {
+      const result = await findContact(intent.phoneNumber);
 
-  const hasSelectableContacts =
-    result.success &&
-    (
-      /Contact index:\s*\d+/i.test(result.message) ||
-      /I found\s+[1-9]\d*\s+matching contacts:/i.test(result.message)
-    );
+      const hasSelectableContacts =
+        result.success &&
+        (
+          /Contact index:\s*\d+/i.test(result.message) ||
+          /I found\s+[1-9]\d*\s+matching contacts:/i.test(result.message)
+        );
 
-  return {
-    response: result.message,
-    confirmation: hasSelectableContacts
-      ? "find_contact confirmation:"
-      : undefined,
-  };
-}
+      return {
+        response: result.message,
+        confirmation: hasSelectableContacts
+          ? "find_contact confirmation:"
+          : undefined,
+      };
+    }
     case "confirm_call":
       return {
         response: (await callNumberConfirm(intent.phoneNumber)).message,
