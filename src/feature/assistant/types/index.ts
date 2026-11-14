@@ -51,6 +51,13 @@ export type AssistantIntent =
     query: string;
   }
   | {
+    type: "set_brightness";
+    percentage: number;
+  }
+| {
+    type: "brightness_info";
+  }
+  | {
     type: "unknown";
   };
 

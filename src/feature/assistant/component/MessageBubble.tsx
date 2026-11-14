@@ -33,6 +33,7 @@ export function MessageBubble({ message }: Props) {
               ? styles.userText
               : styles.assistantText,
           ]}
+          selectable 
         >
           {message.text}
         </Text>

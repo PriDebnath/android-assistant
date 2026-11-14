@@ -6,6 +6,7 @@
     "@expo/ui": "~58.0.24",
     "expo": "58.0.20",
     "expo-asset": "~58.0.18",
+    "expo-brightness": "~58.0.2",
     "expo-build-properties": "~58.0.11",
     "expo-constants": "~58.0.13",
     "expo-contacts": "~58.0.10",
@@ -56,6 +57,7 @@
     "lint": "expo lint",
     "android:prebuild": "npx expo prebuild",
     "c": "npx expo prebuild --clean",
+    "get:info":"adb shell appops get com.pri.assistant WRITE_SETTINGS",
     "android:generate:apk": "cd android && gradlew assembleRelease  && cd ..",
     "android:generate:apk:armeabi-v7a": "cd android && gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a && cd .."
   },

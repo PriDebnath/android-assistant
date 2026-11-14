@@ -3,12 +3,12 @@ const isWindows = process.platform === 'win32';
 
 export default ({ }) => ({
   "expo": {
-    "name": "my-mobile-app",
-    "slug": "my-mobile-app",
+    "name": "Pri",
+    "slug": "Pri",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/pri.cropped.2.png",
-    "scheme": "mymobileapp",
+    "scheme": "Pri",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -24,7 +24,10 @@ export default ({ }) => ({
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.pri.assistant",
       "permissions": [
-        "CALL_PHONE"
+        "CALL_PHONE",
+            "WRITE_SETTINGS",
+        "android.permission.WRITE_SETTINGS",
+"SYSTEM_BRIGHTNESS",
       ]
     },
     "web": {
@@ -95,7 +98,7 @@ export default ({ }) => ({
         "expo-splash-screen",
         {
           // "backgroundColor": "#232323",
-          "image": "./assets/images/pri.cropped.2.png",
+          "image": "./assets/images/pri.cropped.3.png",
              imageWidth: 360,
           resizeMode: "cover",
           // "dark": {

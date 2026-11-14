@@ -2,6 +2,7 @@ import { AssistantIntent, SupportedApp } from "@/feature/assistant/types";
 import { Linking, Platform } from "react-native";
 import { parseIntentWithAI } from "./ai/service/ai-intent.service";
 import { calculate, callNumber, callNumberConfirm, callNumberReject, findContact, getContactPhoneNumber, getFirstPhoneNumber, normalizeText, parseContactSelectionIndex, playYoutube, playYoutubeMusic, removePolitePrefix, searchWeb } from "./helper";
+import { getBrightness, setBrightness } from "./service/device-control";
 
 export const appAliases: Record<string, SupportedApp> = {
   // YouTube
@@ -510,6 +511,40 @@ if (findContactContext) {
       phoneNumber: contactSuffixMatch[1].trim(),
     };
   }
+
+
+// GET CURRENT BRIGHTNESS
+const brightnessInfoMatch = command.match(
+  /^(?:what(?:'s| is)|tell me|check|show|get|read)\s+(?:my\s+)?(?:screen\s+)?brightness(?:\s+level)?[?.!]*$/i
+);
+
+if (brightnessInfoMatch) {
+  return {
+    type: "brightness_info",
+  };
+}
+
+// SET BRIGHTNESS
+// const brightnessMatch = command.match(
+//   /^(?:set|change|adjust|make)\s+(?:my\s+)?(?:screen\s+)?brightness\s+(?:to\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
+// );
+const brightnessMatch = command.match(
+  /^(?:(?:please|can you|could you)\s+)?(?:(?:set|change|adjust|make|turn)\s+)?(?:my\s+)?(?:(?:screen|display)\s+)?brightness\s+(?:(?:to|at|level)\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
+);
+if (brightnessMatch?.[1]) {
+  const percentage = Number(brightnessMatch[1]);
+
+  if (percentage >= 1 && percentage <= 100) {
+    return {
+      type: "set_brightness",
+      percentage,
+    };
+  }
+
+  return {
+    type: "unknown",
+  };
+}
 
   // =====================================================
   // 5. WEB SEARCH
@@ -1033,7 +1068,21 @@ export async function handleAssistantMessage(
         // confirmation: false,
       }
     }
+case "set_brightness": {
+  const result = await setBrightness(intent.percentage);
 
+  return {
+    response: "result.message",
+  };
+}
+
+case "brightness_info": {
+  const result = await getBrightness();
+
+  return {
+    response: result.message,
+  };
+}
     case "calculate":
       return {
         response: calculate(intent.expression).message,
