@@ -45,7 +45,7 @@ export async function getBrightness() {
     };
   }
 }
-
+ 
 export async function setBrightness(percentage: number) {
   try {
     if (!Number.isFinite(percentage)) {

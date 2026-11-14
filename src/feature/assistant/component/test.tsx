@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Alert, Button, Linking, Platform, Text } from "react-native";
-import { playYoutube } from "../helper";
-import { setBrightness } from "../service/device-control";
+import { Button, Text } from "react-native";
+import { setBrightness } from "../service/device-control/brightness";
+import { getBatteryInfo } from "../service/device-control/battery";
 
 export default function Test() {
 
@@ -14,9 +14,12 @@ let [c,setC] =useState(0)
             </Text>
             <Button
                 title="test"
-                onPress={()=> {
+                onPress={ async ()=> {
                     setC(c+0.10)
                     setBrightness(c)
+                   let a = await getBatteryInfo()
+                   console.log({a});
+                   
                 }
             }
             />

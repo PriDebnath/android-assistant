@@ -1,8 +1,9 @@
 import { AssistantIntent, SupportedApp } from "@/feature/assistant/types";
-import { Linking, Platform } from "react-native";
+import { Linking } from "react-native";
 import { parseIntentWithAI } from "./ai/service/ai-intent.service";
 import { calculate, callNumber, callNumberConfirm, callNumberReject, findContact, getContactPhoneNumber, getFirstPhoneNumber, normalizeText, parseContactSelectionIndex, playYoutube, playYoutubeMusic, removePolitePrefix, searchWeb } from "./helper";
-import { getBrightness, setBrightness } from "./service/device-control";
+import { getBrightness, setBrightness } from "./service/device-control/brightness";
+import { decreaseVolume, increaseVolume, muteVolume, unmuteVolume } from "./service/device-control/volume";
 
 export const appAliases: Record<string, SupportedApp> = {
   // YouTube
@@ -479,10 +480,15 @@ if (findContactContext) {
     command,
   });
 
-  // =====================================================
-  // 4. FIND CONTACT BY EXPLICIT CONTACT / NUMBER REQUEST
-  // =====================================================
+ const batteryInfoMatch = command.match(
+  /^(?:(?:what(?:'s| is)|tell me|check|show|get|read|how much)\s+)?(?:(?:my|the|phone's)\s+)?(?:battery|battery level|battery percentage|battery status|charging status|charging state)(?:\s+(?:level|percentage|status|information|info|left|remaining))?[?.!]*$/i
+);
 
+if (batteryInfoMatch) {
+  return {
+    type: "battery_info",
+  };
+}
   const explicitContactMatch = command.match(
     /^(?:find|search(?:\s+for)?|look\s+for|look\s+up|get|show(?:\s+me)?|google)\s+(?:(?:the\s+)?contact(?:\s+(?:named|called))?\s+|(?:the\s+)?(?:phone\s+)?number\s+(?:of|for)\s+)(.+)$/i
   );
@@ -495,6 +501,8 @@ if (findContactContext) {
         .replace(/[?.!,]+$/, ""),
     };
   }
+
+  
 
   // Examples:
   // What's John's number?
@@ -523,6 +531,135 @@ if (brightnessInfoMatch) {
     type: "brightness_info",
   };
 }
+const volumeInfoMatch = command.match(
+  /^(?:(?:what(?:'s| is)|tell me|check|show|get|read)\s+)?(?:(?:my|the|phone's)\s+)?(?:volume|media volume|sound volume)(?:\s+(?:level|percentage|status))?[?.!]*$/i
+);
+
+if (volumeInfoMatch) {
+  return { type: "volume_info" };
+}
+
+
+// const volumeMatch = command.match(
+//   /^(?:(?:set|change|adjust|make|turn)\s+)?(?:(?:my|the)\s+)?(?:media\s+)?volume\s+(?:(?:to|at|level)\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
+// );
+
+// if (volumeMatch?.[1]) {
+//   const percentage = Number(volumeMatch[1]);
+
+//   if (percentage >= 0 && percentage <= 100) {
+//     return {
+//       type: "set_volume",
+//       percentage,
+//     };
+//   }
+
+//   return { type: "unknown" };
+// }
+
+
+  // =====================================================
+  // VOLUME CONTROL
+  // =====================================================
+
+  // GET CURRENT VOLUME
+  // Examples:
+  // What's my volume?
+  // Check media volume.
+  // How loud is my phone?
+
+  // const volumeInfoMatch = command.match(
+  //   /^(?:(?:what(?:'s| is)|tell me|check|show|get|read|how loud is)\s+)?(?:(?:my|the|phone's)\s+)?(?:media\s+|sound\s+)?volume(?:\s+(?:level|percentage|status|right now))?[?.!]*$/i
+  // );
+
+  if (volumeInfoMatch) {
+    return { type: "volume_info" };
+  }
+
+  // UNMUTE VOLUME
+  // Examples:
+  // Unmute.
+  // Unmute volume.
+  // Turn the volume back on.
+  // Restore my sound.
+
+  const unmuteVolumeMatch = command.match(
+    /^(?:unmute(?:\s+(?:my\s+|the\s+)?(?:media\s+)?volume)?|turn\s+(?:(?:my|the)\s+)?(?:media\s+)?volume\s+(?:back\s+)?on|restore\s+(?:(?:my|the)\s+)?(?:media\s+)?(?:volume|sound)|turn\s+sound\s+back\s+on)[?.!]*$/i
+  );
+
+  if (unmuteVolumeMatch) {
+    return { type: "unmute_volume" };
+  }
+
+  // MUTE VOLUME
+  // Examples:
+  // Mute.
+  // Mute the volume.
+  // Silence my phone.
+  // Turn off media volume.
+
+  const muteVolumeMatch = command.match(
+    /^(?:mute(?:\s+(?:(?:my|the)\s+)?(?:media\s+)?volume)?|silence\s+(?:(?:my|the)\s+)?(?:phone|volume|sound)|turn\s+(?:(?:my|the)\s+)?(?:media\s+)?volume\s+off)[?.!]*$/i
+  );
+
+  if (muteVolumeMatch) {
+    return { type: "mute_volume" };
+  }
+
+  // INCREASE VOLUME
+  // Examples:
+  // Increase volume.
+  // Turn up the volume.
+  // Make it louder.
+  // Raise the media volume.
+
+  const increaseVolumeMatch = command.match(
+    /^(?:(?:increase|raise|boost|turn\s+up)\s+(?:(?:my|the)\s+)?(?:(?:media|sound)\s+)?volume|(?:make\s+)?(?:it|the\s+sound|the\s+volume)\s+louder|volume\s+up|louder)[?.!]*$/i
+  );
+
+  if (increaseVolumeMatch) {
+    return { type: "increase_volume" };
+  }
+
+  // DECREASE VOLUME
+  // Examples:
+  // Decrease volume.
+  // Turn down the volume.
+  // Make it quieter.
+  // Lower the sound.
+
+  const decreaseVolumeMatch = command.match(
+    /^(?:(?:decrease|reduce|lower|turn\s+down)\s+(?:(?:my|the)\s+)?(?:(?:media|sound)\s+)?volume|(?:make\s+)?(?:it|the\s+sound|the\s+volume)\s+(?:quieter|softer)|volume\s+down|quieter|softer)[?.!]*$/i
+  );
+
+  if (decreaseVolumeMatch) {
+    return { type: "decrease_volume" };
+  }
+
+  // SET VOLUME
+  // Examples:
+  // Set volume to 70%.
+  // Change media volume to 50.
+  // Make volume 80%.
+  // Turn volume to 30%.
+
+  const volumeMatch = command.match(
+    /^(?:(?:set|change|adjust|make|turn)\s+)?(?:(?:my|the)\s+)?(?:(?:media|sound)\s+)?volume\s+(?:(?:to|at|level)\s+)?(\d{1,3})\s*(?:%|percent)?[?.!]*$/i
+  );
+
+  if (volumeMatch?.[1]) {
+    const percentage = Number(volumeMatch[1]);
+
+    if (percentage >= 0 && percentage <= 100) {
+      return {
+        type: "set_volume",
+        percentage,
+      };
+    }
+
+    return { type: "unknown" };
+  }
+
 
 // SET BRIGHTNESS
 // const brightnessMatch = command.match(
@@ -1073,6 +1210,34 @@ case "set_brightness": {
 
   return {
     response: "result.message",
+  };
+}
+
+case "unmute_volume": {
+  const result = await unmuteVolume();
+  return {
+    response: result.message,
+  };
+}
+
+case "increase_volume": {
+  const result = await increaseVolume();
+  return {
+    response: result.message,
+  };
+}
+case "decrease_volume": {
+  const result = await decreaseVolume();
+  return {
+    response: result.message,
+  };
+}
+
+
+case "mute_volume": {
+  const result = await muteVolume();
+  return {
+    response: result.message,
   };
 }
 

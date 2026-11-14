@@ -25,7 +25,7 @@ export type AssistantIntent =
     type: "call";
     phoneNumber: string;
   }
-    | {
+  | {
     type: "find_contact";
     phoneNumber: string;
   }
@@ -42,11 +42,11 @@ export type AssistantIntent =
     phoneNumber?: string;
     message?: string;
   }
-      | {
+  | {
     type: "play_youtube_music";
     query: string;
   }
-      | {
+  | {
     type: "play_youtube_video";
     query: string;
   }
@@ -54,10 +54,39 @@ export type AssistantIntent =
     type: "set_brightness";
     percentage: number;
   }
-| {
+  | {
     type: "brightness_info";
   }
   | {
+    type: "battery_info";
+  } |
+  {
+    type: "volume_info";
+  } |
+  {
+    type: "set_volume";
+    percentage: number;
+  }
+  | {
+    type: "set_flashlight";
+    enabled: boolean;
+  }
+  | {
+    type: "set_alarm";
+    hour: number;
+    minute: number;
+  } | {
+    type: "set_timer";
+    durationSeconds: number;
+  } | {
+    type: 'unmute_volume'
+  }| {
+    type: 'mute_volume'
+  } | {
+    type: 'increase_volume'
+  } | {
+    type: 'decrease_volume'
+  } | {
     type: "unknown";
   };
 
