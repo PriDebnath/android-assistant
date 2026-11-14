@@ -146,15 +146,15 @@ console.log({confirmation});
 
         <View style={styles.container}>
           <View style={styles.header}>
-            <View>
+            {/* <View>
               <Text style={styles.title}>
                 Assistant
-              </Text>
+              </Text> */}
 {/* <WakeWordTest/> */}
-              <Text style={styles.subtitle}>
+              {/* <Text style={styles.subtitle}>
                 Your personal assistant
               </Text>
-            </View>
+            </View> */}
 
             <View style={styles.status}>
               <View style={styles.statusDot} />
