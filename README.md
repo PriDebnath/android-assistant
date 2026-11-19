@@ -1,56 +1,73 @@
-# Welcome to your Expo app 👋
+# Pri - assistant — Android Voice Assistant
+A lightweight, on-device Android assistant that understands voice or text commands and performs supported phone actions.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 🔴 Demo
 
-## Get started
+### 🔴 🖼️ Screenshot
 
-1. Install dependencies
+<img height="480" src="assets/images/demo/demo-1.jpg" />
 
-   ```bash
-   npm install
-   ```
 
-2. Start the app
+### 🔴 📱 Android App
 
-   ```bash
-   npx expo start
-   ```
+⬇️ Download APK  
+https://github.com/PriDebnath/pri-assistant/releases/latest/download/app-debug.apk
 
-In the output, you'll find options to open the app in a
+ 
+---
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## How It Works
+1. Normalize the user's request.
+2. Match it with the rule-based intent parser.
+3. If no intent matches, use the AI intent parser as a fallback.
+4. Execute the action and return a short response.
+5. Ask for confirmation when a phone call needs approval.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## Supported Features
 
-When you're ready, run:
+### Apps
+Open supported apps:
+- Chrome / Browser / Google
+- WhatsApp
+- Spotify
+- Google Maps
+- Settings
 
-```bash
-npm run reset-project
-```
+### Web & Media
+- Search the web.
+- Play a YouTube video.
+- Play music on YouTube Music.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Phone Controls
+- Increase, decrease, mute, or unmute media volume.
+- Set or check screen brightness.
+- Turn the flashlight on or off.
 
-### Other setup steps
+### Contacts & Calls
+- Find a contact by name or search for a phone number.
+- Select a contact from matching results.
+- Call a phone number or contact.
+- Confirm or reject a pending call.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### Calculator
+- Perform basic arithmetic: addition, subtraction, multiplication, division, and modulo.
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## Example Commands
+|--------------------------------------------------------|
+| Task           | Example                               |
+|----------------|---------------------------------------|
+| Open an app    | “Open WhatsApp”                       |
+| Search the web | “Search for React Native tutorials”   |
+| Play a video   | “Play a video about space on YouTube” |
+| Play music     | “Play some relaxing music”            |
+| Control volume | “Turn up the volume”                  |
+| Set brightness | “Set brightness to 60 percent”        |
+| Flashlight     | “Turn on the flashlight”              |
+| Find a contact | “Find Rahul’s number”                 |
+| Make a call    | “Call 9876543210”                     |
+| Calculate      | “Multiply 25 by 18”                   |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
