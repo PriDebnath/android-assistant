@@ -1,4 +1,4 @@
-# Pri - assistant — Android Voice Assistant
+# Android Assistant
 A lightweight, on-device Android assistant that understands voice or text commands and performs supported phone actions.
 
 ## 🔴 Demo
@@ -11,7 +11,7 @@ A lightweight, on-device Android assistant that understands voice or text comman
 ### 🔴 📱 Android App
 
 ⬇️ Download APK  
-https://github.com/PriDebnath/pri-assistant/releases/latest/download/app-debug.apk
+https://github.com/PriDebnath/pri-assistant/releases/latest/download/app-release.apk
 
  
 ---
@@ -57,7 +57,7 @@ Open supported apps:
 ---
 
 ## Example Commands
-|--------------------------------------------------------|
+
 | Task           | Example                               |
 |----------------|---------------------------------------|
 | Open an app    | “Open WhatsApp”                       |
