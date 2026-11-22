@@ -19,7 +19,7 @@ jobs:
   android_build:
     name: Build Android Release APK
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
 
     steps:
       # --------------------------------------------------
@@ -123,8 +123,9 @@ jobs:
         working-directory: android
         run: |
           ./gradlew :app:assembleRelease \
+            --build-cache \
+            --parallel \
             --stacktrace
-
       # --------------------------------------------------
       # Check disk space after build
       # --------------------------------------------------
